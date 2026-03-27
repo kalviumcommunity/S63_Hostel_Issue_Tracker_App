@@ -4,7 +4,6 @@ import '../../models/issue_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/issue_provider.dart';
 import '../../widgets/issue_card.dart';
-import '../../widgets/stats_row.dart';
 import '../profile/profile_screen.dart';
 
 class AdminDashboard extends StatefulWidget {
@@ -15,30 +14,34 @@ class AdminDashboard extends StatefulWidget {
 }
 
 class _AdminDashboardState extends State<AdminDashboard> {
-  int _currentTab = 0;
+  int _currentIndex = 0;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: _currentTab == 0
-          ? const _AllIssuesTab()
-          : const ProfileScreen(),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentTab,
-        onTap: (i) => setState(() => _currentTab = i),
-        backgroundColor: const Color(0xFF1A1A2E),
-        selectedItemColor: const Color(0xFF6C63FF),
-        unselectedItemColor: const Color(0xFF6C6685),
-        type: BottomNavigationBarType.fixed,
-        items: const [
-          BottomNavigationBarItem(
+      backgroundColor: const Color(0xFFF9FAFB),
+      body: IndexedStack(
+        index: _currentIndex,
+        children: const [
+          _AdminAllIssuesTab(),
+          ProfileScreen(),
+        ],
+      ),
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: _currentIndex,
+        onDestinationSelected: (v) => setState(() => _currentIndex = v),
+        backgroundColor: Colors.white,
+        elevation: 8,
+        indicatorColor: const Color(0xFF6C63FF).withValues(alpha: 0.15),
+        destinations: const [
+          NavigationDestination(
             icon: Icon(Icons.dashboard_outlined),
-            activeIcon: Icon(Icons.dashboard),
+            selectedIcon: Icon(Icons.dashboard_rounded, color: Color(0xFF6C63FF)),
             label: 'All Issues',
           ),
-          BottomNavigationBarItem(
+          NavigationDestination(
             icon: Icon(Icons.person_outline),
-            activeIcon: Icon(Icons.person),
+            selectedIcon: Icon(Icons.person_rounded, color: Color(0xFF6C63FF)),
             label: 'Profile',
           ),
         ],
@@ -47,162 +50,191 @@ class _AdminDashboardState extends State<AdminDashboard> {
   }
 }
 
-// ─── All Issues Tab (Admin) ────────────────────────────────────────────────────
-class _AllIssuesTab extends StatefulWidget {
-  const _AllIssuesTab();
+class _AdminAllIssuesTab extends StatefulWidget {
+  const _AdminAllIssuesTab();
 
   @override
-  State<_AllIssuesTab> createState() => _AllIssuesTabState();
+  State<_AdminAllIssuesTab> createState() => _AdminAllIssuesTabState();
 }
 
-class _AllIssuesTabState extends State<_AllIssuesTab> {
-  String _filter = 'all'; // all | pending | in_progress | resolved
-
-  List<IssueModel> _getFiltered(IssueProvider p) {
-    switch (_filter) {
-      case 'pending':
-        return p.pendingIssues;
-      case 'in_progress':
-        return p.inProgressIssues;
-      case 'resolved':
-        return p.resolvedIssues;
-      default:
-        return p.issues;
-    }
-  }
+class _AdminAllIssuesTabState extends State<_AdminAllIssuesTab> {
+  String _filter = 'All'; // 'All', 'Pending', 'In Progress', 'Resolved'
 
   @override
   Widget build(BuildContext context) {
-    final auth = context.watch<AuthProvider>();
-    final provider = context.watch<IssueProvider>();
-    final filtered = _getFiltered(provider);
+    final user = context.watch<AuthProvider>().userModel;
+    final issueProvider = context.watch<IssueProvider>();
+
+    List<IssueModel> filteredIssues = [];
+    if (_filter == 'All') {
+      filteredIssues = issueProvider.issues;
+    } else if (_filter == 'Pending') {
+      filteredIssues = issueProvider.pendingIssues;
+    } else if (_filter == 'In Progress') {
+      filteredIssues = issueProvider.inProgressIssues;
+    } else if (_filter == 'Resolved') {
+      filteredIssues = issueProvider.resolvedIssues;
+    }
 
     return SafeArea(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Stack(
         children: [
-          // Admin header
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 20, 20, 4),
-            child: Row(
-              children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Admin Panel 🛠️',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 22,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    Text(
-                      auth.userModel?.name ?? 'Admin',
-                      style: const TextStyle(
-                          color: Color(0xFF9E9EBF), fontSize: 13),
-                    ),
-                  ],
-                ),
-                const Spacer(),
-                _AdminBadge(),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 16),
-
-          // Stats
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: StatsRow(
-              pending: provider.pendingIssues.length,
-              inProgress: provider.inProgressIssues.length,
-              resolved: provider.resolvedIssues.length,
-            ),
-          ),
-
-          const SizedBox(height: 16),
-
-          // Filter Tabs
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
+          // Content
+          RefreshIndicator(
+            color: const Color(0xFF6C63FF),
+            backgroundColor: Colors.white,
+            onRefresh: () async {
+              issueProvider.listenToAllIssues();
+            },
             child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
+              padding: const EdgeInsets.only(left: 24, right: 24, top: 180, bottom: 20),
+              physics: const AlwaysScrollableScrollPhysics(),
+              child: filteredIssues.isEmpty
+                  ? Container(
+                      width: double.infinity,
+                      margin: const EdgeInsets.only(top: 40),
+                      padding: const EdgeInsets.symmetric(vertical: 60),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(24),
+                        border: Border.all(color: const Color(0xFFF3F4F6)),
+                      ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.assignment_turned_in_rounded,
+                              size: 70, color: Color(0xFF9CA3AF)),
+                          const SizedBox(height: 16),
+                          Text('No $_filter Issues',
+                              style: const TextStyle(
+                                  color: Color(0xFF111827),
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: -0.5)),
+                          const SizedBox(height: 6),
+                          const Text('Everything looks clean.',
+                              style: TextStyle(color: Color(0xFF6B7280))),
+                        ],
+                      ),
+                    )
+                  : ListView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: filteredIssues.length,
+                      itemBuilder: (context, index) {
+                        return IssueCard(
+                          issue: filteredIssues[index],
+                          isAdmin: true,
+                        );
+                      },
+                    ),
+            ),
+          ),
+
+          // Top Header (Fixed at top)
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: Container(
+              padding: const EdgeInsets.fromLTRB(24, 20, 24, 16),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF9FAFB),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF111827).withValues(alpha: 0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  )
+                ]
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _FilterChip(
-                    label: 'All',
-                    count: provider.issues.length,
-                    isSelected: _filter == 'all',
-                    onTap: () => setState(() => _filter = 'all'),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Admin Panel',
+                            style: TextStyle(
+                              color: Color(0xFF111827),
+                              fontSize: 28,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: -1,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            user?.name ?? 'Admin',
+                            style: const TextStyle(
+                              color: Color(0xFF6B7280),
+                              fontSize: 15,
+                            ),
+                          ),
+                        ],
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFEF4444).withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: const Color(0xFFEF4444).withValues(alpha: 0.3)),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.campaign_rounded, size: 16, color: Color(0xFFEF4444)),
+                            const SizedBox(width: 6),
+                            Text(
+                              '${issueProvider.pendingIssues.length} New',
+                              style: const TextStyle(
+                                  color: Color(0xFFEF4444),
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 14),
+                            ),
+                          ],
+                        ),
+                      )
+                    ],
                   ),
-                  _FilterChip(
-                    label: 'Pending',
-                    count: provider.pendingIssues.length,
-                    isSelected: _filter == 'pending',
-                    color: const Color(0xFFFF6B6B),
-                    onTap: () => setState(() => _filter = 'pending'),
-                  ),
-                  _FilterChip(
-                    label: 'In Progress',
-                    count: provider.inProgressIssues.length,
-                    isSelected: _filter == 'in_progress',
-                    color: const Color(0xFFFFB347),
-                    onTap: () => setState(() => _filter = 'in_progress'),
-                  ),
-                  _FilterChip(
-                    label: 'Resolved',
-                    count: provider.resolvedIssues.length,
-                    isSelected: _filter == 'resolved',
-                    color: const Color(0xFF4CAF94),
-                    onTap: () => setState(() => _filter = 'resolved'),
+                  const SizedBox(height: 24),
+
+                  // Filter Chips
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    physics: const BouncingScrollPhysics(),
+                    child: Row(
+                      children: [
+                        _FilterChip(
+                            label: 'All',
+                            count: issueProvider.issues.length,
+                            isSelected: _filter == 'All',
+                            onTap: () => setState(() => _filter = 'All')),
+                        _FilterChip(
+                            label: 'Pending',
+                            count: issueProvider.pendingIssues.length,
+                            isSelected: _filter == 'Pending',
+                            onTap: () => setState(() => _filter = 'Pending')),
+                        _FilterChip(
+                            label: 'In Progress',
+                            count: issueProvider.inProgressIssues.length,
+                            isSelected: _filter == 'In Progress',
+                            onTap: () => setState(() => _filter = 'In Progress')),
+                        _FilterChip(
+                            label: 'Resolved',
+                            count: issueProvider.resolvedIssues.length,
+                            isSelected: _filter == 'Resolved',
+                            onTap: () => setState(() => _filter = 'Resolved')),
+                      ],
+                    ),
                   ),
                 ],
               ),
             ),
           ),
-
-          const SizedBox(height: 10),
-
-          // Issue list
-          Expanded(
-            child: filtered.isEmpty
-                ? Center(
-                    child: Text(
-                      'No issues in this category',
-                      style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.3)),
-                    ),
-                  )
-                : ListView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    itemCount: filtered.length,
-                    itemBuilder: (context, i) =>
-                        IssueCard(issue: filtered[i], isAdmin: true),
-                  ),
-          ),
         ],
-      ),
-    );
-  }
-}
-
-class _AdminBadge extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-            colors: [Color(0xFF6C63FF), Color(0xFF3ECFCF)]),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: const Text(
-        'ADMIN',
-        style: TextStyle(
-            color: Colors.white, fontSize: 11, fontWeight: FontWeight.w800,
-            letterSpacing: 1.2),
       ),
     );
   }
@@ -212,14 +244,12 @@ class _FilterChip extends StatelessWidget {
   final String label;
   final int count;
   final bool isSelected;
-  final Color color;
   final VoidCallback onTap;
 
   const _FilterChip({
     required this.label,
     required this.count,
     required this.isSelected,
-    this.color = const Color(0xFF6C63FF),
     required this.onTap,
   });
 
@@ -229,24 +259,51 @@ class _FilterChip extends StatelessWidget {
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        margin: const EdgeInsets.only(right: 8),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+        margin: const EdgeInsets.only(right: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         decoration: BoxDecoration(
-          color: isSelected ? color.withValues(alpha: 0.2) : const Color(0xFF1A1A2E),
-          borderRadius: BorderRadius.circular(20),
+          color: isSelected ? const Color(0xFF6C63FF) : Colors.white,
+          borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: isSelected ? color : const Color(0xFF2A2A3E),
-            width: isSelected ? 1.5 : 1,
-          ),
+              color: isSelected ? const Color(0xFF6C63FF) : const Color(0xFFE5E7EB),
+              width: 1.5),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: const Color(0xFF6C63FF).withValues(alpha: 0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
+                  )
+                ]
+              : [],
         ),
-        child: Text(
-          '$label  $count',
-          style: TextStyle(
-            color: isSelected ? color : const Color(0xFF9E9EBF),
-            fontWeight:
-                isSelected ? FontWeight.w600 : FontWeight.normal,
-            fontSize: 13,
-          ),
+        child: Row(
+          children: [
+            Text(
+              label,
+              style: TextStyle(
+                color: isSelected ? Colors.white : const Color(0xFF6B7280),
+                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
+                fontSize: 14,
+              ),
+            ),
+            const SizedBox(width: 6),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: isSelected ? Colors.white.withValues(alpha: 0.2) : const Color(0xFFF3F4F6),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                count.toString(),
+                style: TextStyle(
+                  color: isSelected ? Colors.white : const Color(0xFF9CA3AF),
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            )
+          ],
         ),
       ),
     );
