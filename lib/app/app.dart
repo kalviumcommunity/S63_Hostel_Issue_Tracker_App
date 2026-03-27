@@ -6,7 +6,6 @@ import '../screens/auth/register_screen.dart';
 import '../screens/home/home_screen.dart';
 import '../screens/issues/create_issue_screen.dart';
 import '../screens/issues/issue_detail_screen.dart';
-import '../screens/profile/profile_screen.dart';
 
 class HostelIssueTrackerApp extends StatelessWidget {
   const HostelIssueTrackerApp({super.key});
@@ -17,7 +16,7 @@ class HostelIssueTrackerApp extends StatelessWidget {
       title: 'Hostel Issue Tracker',
       debugShowCheckedModeBanner: false,
       theme: _buildTheme(),
-      routerConfig: _router(context),
+      routerConfig: _router,
     );
   }
 
@@ -30,7 +29,6 @@ class HostelIssueTrackerApp extends StatelessWidget {
       ),
       scaffoldBackgroundColor: const Color(0xFF0F0F1A),
       cardColor: const Color(0xFF1A1A2E),
-      fontFamily: 'Poppins',
       appBarTheme: const AppBarTheme(
         backgroundColor: Color(0xFF0F0F1A),
         foregroundColor: Colors.white,
@@ -42,66 +40,55 @@ class HostelIssueTrackerApp extends StatelessWidget {
           backgroundColor: const Color(0xFF6C63FF),
           foregroundColor: Colors.white,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
+              borderRadius: BorderRadius.circular(12)),
           minimumSize: const Size(double.infinity, 52),
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: const Color(0xFF1A1A2E),
+        hintStyle: const TextStyle(color: Color(0xFF9E9EBF)),
+        labelStyle: const TextStyle(color: Color(0xFF9E9EBF)),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide.none,
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFF2A2A3E)),
+          borderSide:
+              const BorderSide(color: Color(0xFF2A2A3E)),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFF6C63FF), width: 2),
+          borderSide:
+              const BorderSide(color: Color(0xFF6C63FF), width: 2),
         ),
-        labelStyle: const TextStyle(color: Color(0xFF9E9EBF)),
-        hintStyle: const TextStyle(color: Color(0xFF9E9EBF)),
+      ),
+      bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+        backgroundColor: Color(0xFF1A1A2E),
+        selectedItemColor: Color(0xFF6C63FF),
+        unselectedItemColor: Color(0xFF6C6685),
+        showUnselectedLabels: true,
+        type: BottomNavigationBarType.fixed,
       ),
     );
   }
 
-  GoRouter _router(BuildContext context) {
-    return GoRouter(
-      initialLocation: '/',
-      routes: [
-        GoRoute(
-          path: '/',
-          builder: (context, state) => const SplashScreen(),
-        ),
-        GoRoute(
-          path: '/login',
-          builder: (context, state) => const LoginScreen(),
-        ),
-        GoRoute(
-          path: '/register',
-          builder: (context, state) => const RegisterScreen(),
-        ),
-        GoRoute(
-          path: '/home',
-          builder: (context, state) => const HomeScreen(),
-        ),
-        GoRoute(
+  GoRouter get _router => GoRouter(
+    initialLocation: '/',
+    routes: [
+      GoRoute(path: '/', builder: (context, state) => const SplashScreen()),
+      GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
+      GoRoute(path: '/register', builder: (context, state) => const RegisterScreen()),
+      GoRoute(path: '/home', builder: (context, state) => const HomeScreen()),
+      GoRoute(
           path: '/create-issue',
-          builder: (context, state) => const CreateIssueScreen(),
-        ),
-        GoRoute(
-          path: '/issue/:id',
-          builder: (context, state) =>
-              IssueDetailScreen(issueId: state.pathParameters['id']!),
-        ),
-        GoRoute(
-          path: '/profile',
-          builder: (context, state) => const ProfileScreen(),
-        ),
-      ],
-    );
-  }
+          builder: (context, state) => const CreateIssueScreen()),
+      GoRoute(
+        path: '/issue/:id',
+        builder: (context, state) =>
+            IssueDetailScreen(issueId: state.pathParameters['id']!),
+      ),
+    ],
+  );
 }

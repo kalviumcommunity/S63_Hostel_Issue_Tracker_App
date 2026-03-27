@@ -1,36 +1,47 @@
+// Issue status values
+const String statusPending = 'pending';
+const String statusInProgress = 'in_progress';
+const String statusResolved = 'resolved';
+
+// Issue categories aligned with hostel problems
+const List<String> issueCategories = [
+  'Mess Food',
+  'Water Problem',
+  'Electricity',
+  'Room Maintenance',
+  'Cleanliness',
+  'Internet / WiFi',
+  'Security',
+  'Other',
+];
+
 class IssueModel {
   final String id;
   final String title;
   final String description;
-  final String category; // e.g. 'Plumbing', 'Electrical', 'Furniture', etc.
-  final String priority; // 'low', 'medium', 'high'
-  final String status; // 'open', 'in_progress', 'resolved', 'closed'
-  final String reportedBy; // user uid
-  final String reporterName;
-  final String roomNumber;
-  final String hostelBlock;
-  final List<String> imageUrls;
+  final String category;
+  final String status; // pending | in_progress | resolved
+  final String createdBy; // user uid
+  final String createdByName;
+  final String location; // room number + block
+  final String? imageUrl;
   final DateTime createdAt;
   final DateTime? updatedAt;
-  final String? assignedTo; // admin/staff uid
-  final String? resolutionNote;
+  final String? adminComment;
 
   IssueModel({
     required this.id,
     required this.title,
     required this.description,
     required this.category,
-    required this.priority,
     required this.status,
-    required this.reportedBy,
-    required this.reporterName,
-    required this.roomNumber,
-    required this.hostelBlock,
-    required this.imageUrls,
+    required this.createdBy,
+    required this.createdByName,
+    required this.location,
+    this.imageUrl,
     required this.createdAt,
     this.updatedAt,
-    this.assignedTo,
-    this.resolutionNote,
+    this.adminComment,
   });
 
   factory IssueModel.fromMap(Map<String, dynamic> map, String docId) {
@@ -39,17 +50,16 @@ class IssueModel {
       title: map['title'] ?? '',
       description: map['description'] ?? '',
       category: map['category'] ?? 'Other',
-      priority: map['priority'] ?? 'medium',
-      status: map['status'] ?? 'open',
-      reportedBy: map['reportedBy'] ?? '',
-      reporterName: map['reporterName'] ?? '',
-      roomNumber: map['roomNumber'] ?? '',
-      hostelBlock: map['hostelBlock'] ?? '',
-      imageUrls: List<String>.from(map['imageUrls'] ?? []),
-      createdAt: DateTime.parse(map['createdAt'] ?? DateTime.now().toIso8601String()),
-      updatedAt: map['updatedAt'] != null ? DateTime.parse(map['updatedAt']) : null,
-      assignedTo: map['assignedTo'],
-      resolutionNote: map['resolutionNote'],
+      status: map['status'] ?? statusPending,
+      createdBy: map['createdBy'] ?? '',
+      createdByName: map['createdByName'] ?? '',
+      location: map['location'] ?? '',
+      imageUrl: map['imageUrl'],
+      createdAt: DateTime.parse(
+          map['createdAt'] ?? DateTime.now().toIso8601String()),
+      updatedAt:
+          map['updatedAt'] != null ? DateTime.parse(map['updatedAt']) : null,
+      adminComment: map['adminComment'],
     );
   }
 
@@ -58,24 +68,20 @@ class IssueModel {
       'title': title,
       'description': description,
       'category': category,
-      'priority': priority,
       'status': status,
-      'reportedBy': reportedBy,
-      'reporterName': reporterName,
-      'roomNumber': roomNumber,
-      'hostelBlock': hostelBlock,
-      'imageUrls': imageUrls,
+      'createdBy': createdBy,
+      'createdByName': createdByName,
+      'location': location,
+      'imageUrl': imageUrl,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt?.toIso8601String(),
-      'assignedTo': assignedTo,
-      'resolutionNote': resolutionNote,
+      'adminComment': adminComment,
     };
   }
 
   IssueModel copyWith({
     String? status,
-    String? assignedTo,
-    String? resolutionNote,
+    String? adminComment,
     DateTime? updatedAt,
   }) {
     return IssueModel(
@@ -83,31 +89,14 @@ class IssueModel {
       title: title,
       description: description,
       category: category,
-      priority: priority,
       status: status ?? this.status,
-      reportedBy: reportedBy,
-      reporterName: reporterName,
-      roomNumber: roomNumber,
-      hostelBlock: hostelBlock,
-      imageUrls: imageUrls,
+      createdBy: createdBy,
+      createdByName: createdByName,
+      location: location,
+      imageUrl: imageUrl,
       createdAt: createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
-      assignedTo: assignedTo ?? this.assignedTo,
-      resolutionNote: resolutionNote ?? this.resolutionNote,
+      adminComment: adminComment ?? this.adminComment,
     );
   }
 }
-
-// Issue categories
-const List<String> issueCategories = [
-  'Plumbing',
-  'Electrical',
-  'Furniture',
-  'Internet / WiFi',
-  'Cleaning',
-  'Security',
-  'Pest Control',
-  'HVAC / Fan / AC',
-  'Laundry',
-  'Other',
-];
