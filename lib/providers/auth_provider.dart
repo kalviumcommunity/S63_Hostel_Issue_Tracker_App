@@ -49,6 +49,7 @@ class AuthProvider extends ChangeNotifier {
     required String name,
     required String roomNumber,
     required String hostelBlock,
+    String role = 'student',
   }) async {
     _isLoading = true;
     _error = null;
@@ -66,7 +67,7 @@ class AuthProvider extends ChangeNotifier {
         email: email,
         roomNumber: roomNumber,
         hostelBlock: hostelBlock,
-        role: 'student',
+        role: role,
         createdAt: DateTime.now(),
       );
 
