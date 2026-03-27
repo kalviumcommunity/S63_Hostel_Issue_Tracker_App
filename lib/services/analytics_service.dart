@@ -1,10 +1,9 @@
-import 'package:flutter/foundation.dart';
 import '../models/issue_model.dart';
-import 'package:intl/intl.dart';
 
 class AnalyticsData {
   final int totalIssues;
   final int pendingIssues;
+  final int assignedIssues;
   final int inProgressIssues;
   final int resolvedIssues;
   final String mostCommonCategory;
@@ -15,6 +14,7 @@ class AnalyticsData {
   AnalyticsData({
     required this.totalIssues,
     required this.pendingIssues,
+    required this.assignedIssues,
     required this.inProgressIssues,
     required this.resolvedIssues,
     required this.mostCommonCategory,
@@ -32,6 +32,7 @@ class AnalyticsService {
       return AnalyticsData(
         totalIssues: 0,
         pendingIssues: 0,
+        assignedIssues: 0,
         inProgressIssues: 0,
         resolvedIssues: 0,
         mostCommonCategory: 'N/A',
@@ -42,6 +43,7 @@ class AnalyticsService {
     }
 
     int pending = 0;
+    int assignedCount = 0;
     int inP = 0;
     int resolved = 0;
     Map<String, int> categories = {};
@@ -55,6 +57,7 @@ class AnalyticsService {
     for (var issue in issues) {
       // 1. Status loop
       if (issue.status == statusPending) pending++;
+      if (issue.status == statusAssigned) assignedCount++;
       if (issue.status == statusInProgress) inP++;
       if (issue.status == statusResolved) resolved++;
 
@@ -62,10 +65,11 @@ class AnalyticsService {
       categories[issue.category] = (categories[issue.category] ?? 0) + 1;
 
       // 3. Resolution time (if resolved and has both timestamps)
-      if (issue.status == statusResolved && issue.updatedAt != null) {
-        // Just as an estimate, diff between created and updated
-        final diff = issue.updatedAt!.difference(issue.createdAt);
-        if (diff.inMinutes > 0) { // filter out instant glitches
+      if (issue.status == statusResolved && (issue.resolvedAt != null || issue.updatedAt != null)) {
+        // Prefer resolvedAt for accuracy
+        final resolveDate = issue.resolvedAt ?? issue.updatedAt!;
+        final diff = resolveDate.difference(issue.createdAt);
+        if (diff.inSeconds > 0) { // filter out instant glitches
           totalResolutionTime += diff;
           resolvedWithTimeCount++;
         }
@@ -101,6 +105,7 @@ class AnalyticsService {
     return AnalyticsData(
       totalIssues: issues.length,
       pendingIssues: pending,
+      assignedIssues: assignedCount,
       inProgressIssues: inP,
       resolvedIssues: resolved,
       mostCommonCategory: maxCatCount > 0 ? commonCategory : 'N/A',

@@ -7,6 +7,7 @@ import '../../providers/auth_provider.dart';
 import '../../providers/issue_provider.dart';
 import '../../services/sla_service.dart';
 import '../../widgets/countdown_timer.dart';
+import '../../widgets/issue_timeline.dart';
 
 class IssueDetailScreen extends StatefulWidget {
   final String issueId;
@@ -71,6 +72,7 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
 
   String _getStatusLabel(String status) {
     if (status == statusPending) return 'Pending';
+    if (status == statusAssigned) return 'Assigned';
     if (status == statusInProgress) return 'In Progress';
     if (status == statusResolved) return 'Resolved';
     return status;
@@ -278,6 +280,10 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
               ],
             ),
             const SizedBox(height: 32),
+            
+            // --- Timeline Section ---
+            IssueTimeline(issue: issue),
+            const SizedBox(height: 32),
 
             // Description
             const Text('Description',
@@ -475,36 +481,27 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
               if (_isUpdating)
                 const Center(child: CircularProgressIndicator(color: Color(0xFF6C63FF)))
               else
-                Row(
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 12,
                   children: [
                     if (issue.status == statusPending)
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: () => _updateStatus(statusInProgress),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: const Color(0xFFF59E0B),
-                            side: const BorderSide(color: Color(0xFFF59E0B), width: 1.5),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                            minimumSize: const Size(0, 56),
-                            backgroundColor: Colors.white,
-                          ),
-                          child: const Text('Mark In Progress', style: TextStyle(fontWeight: FontWeight.w700)),
-                        ),
+                      _buildAdminButton(
+                        label: 'Assign',
+                        color: const Color(0xFF6C63FF),
+                        onTap: () => _updateStatus(statusAssigned),
                       ),
-                    if (issue.status == statusPending) const SizedBox(width: 16),
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: () => _updateStatus(statusResolved),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF10B981),
-                          foregroundColor: Colors.white,
-                          elevation: 4,
-                          shadowColor: const Color(0xFF10B981).withValues(alpha: 0.4),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                          minimumSize: const Size(0, 56),
-                        ),
-                        child: const Text('Mark Resolved', style: TextStyle(fontWeight: FontWeight.w700)),
+                    if (issue.status == statusPending || issue.status == statusAssigned)
+                      _buildAdminButton(
+                        label: 'Start Progress',
+                        color: const Color(0xFFF59E0B),
+                        onTap: () => _updateStatus(statusInProgress),
                       ),
+                    _buildAdminButton(
+                      label: 'Resolve',
+                      color: const Color(0xFF10B981),
+                      onTap: () => _updateStatus(statusResolved),
+                      isPrimary: true,
                     ),
                   ],
                 ),
@@ -536,6 +533,39 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildAdminButton({
+    required String label,
+    required Color color,
+    required VoidCallback onTap,
+    bool isPrimary = false,
+  }) {
+    if (isPrimary) {
+      return ElevatedButton(
+        onPressed: onTap,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: color,
+          foregroundColor: Colors.white,
+          elevation: 4,
+          shadowColor: color.withValues(alpha: 0.4),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          minimumSize: const Size(140, 56),
+        ),
+        child: Text(label, style: const TextStyle(fontWeight: FontWeight.w700)),
+      );
+    }
+    return OutlinedButton(
+      onPressed: onTap,
+      style: OutlinedButton.styleFrom(
+        foregroundColor: color,
+        side: BorderSide(color: color, width: 1.5),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        minimumSize: const Size(140, 56),
+        backgroundColor: Colors.white,
+      ),
+      child: Text(label, style: const TextStyle(fontWeight: FontWeight.w700)),
     );
   }
 }
