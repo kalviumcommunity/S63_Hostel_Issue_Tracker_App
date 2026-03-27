@@ -1,8 +1,8 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
-import 'package:uuid/uuid.dart';
 import '../../models/issue_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/issue_provider.dart';
@@ -19,15 +19,8 @@ class _CreateIssueScreenState extends State<CreateIssueScreen> {
   final _titleController = TextEditingController();
   final _descController = TextEditingController();
   String _selectedCategory = issueCategories.first;
-  String _selectedPriority = 'medium';
-  final List<XFile> _selectedImages = [];
+  XFile? _pickedImage;
   bool _isSubmitting = false;
-
-  final _priorities = [
-    {'value': 'low', 'label': 'Low', 'color': Color(0xFF4CAF94)},
-    {'value': 'medium', 'label': 'Medium', 'color': Color(0xFFFFB347)},
-    {'value': 'high', 'label': 'High', 'color': Color(0xFFFF6B6B)},
-  ];
 
   @override
   void dispose() {
@@ -36,35 +29,41 @@ class _CreateIssueScreenState extends State<CreateIssueScreen> {
     super.dispose();
   }
 
-  Future<void> _pickImages() async {
+  Future<void> _pickImage() async {
     final picker = ImagePicker();
-    final images = await picker.pickMultiImage(imageQuality: 70);
-    if (images.isNotEmpty) {
-      setState(() {
-        _selectedImages.addAll(images);
-      });
-    }
+    final image = await picker.pickImage(
+        source: ImageSource.gallery, imageQuality: 70);
+    if (image != null) setState(() => _pickedImage = image);
   }
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
+
     setState(() => _isSubmitting = true);
 
     final auth = context.read<AuthProvider>();
     final issueProvider = context.read<IssueProvider>();
+    final user = auth.userModel!;
+
+    // Upload photo if one was picked
+    String? imageUrl;
+    if (_pickedImage != null) {
+      imageUrl = await issueProvider.uploadImage(
+        File(_pickedImage!.path),
+        user.uid,
+      );
+    }
 
     final issue = IssueModel(
-      id: const Uuid().v4(),
+      id: '',
       title: _titleController.text.trim(),
       description: _descController.text.trim(),
       category: _selectedCategory,
-      priority: _selectedPriority,
-      status: 'open',
-      reportedBy: auth.userModel?.uid ?? '',
-      reporterName: auth.userModel?.name ?? '',
-      roomNumber: auth.userModel?.roomNumber ?? '',
-      hostelBlock: auth.userModel?.hostelBlock ?? '',
-      imageUrls: [], // TODO: Upload images to Firebase Storage first
+      status: statusPending,
+      createdBy: user.uid,
+      createdByName: user.name,
+      location: '${user.hostelBlock} · Room ${user.roomNumber}',
+      imageUrl: imageUrl,
       createdAt: DateTime.now(),
     );
 
@@ -74,7 +73,7 @@ class _CreateIssueScreenState extends State<CreateIssueScreen> {
     if (success && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Issue reported successfully!'),
+          content: Text('✅ Issue reported successfully!'),
           backgroundColor: Color(0xFF4CAF94),
         ),
       );
@@ -86,12 +85,10 @@ class _CreateIssueScreenState extends State<CreateIssueScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'Report an Issue',
-          style: TextStyle(fontWeight: FontWeight.w700),
-        ),
+        title: const Text('Report an Issue',
+            style: TextStyle(fontWeight: FontWeight.w700)),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios),
+          icon: const Icon(Icons.close),
           onPressed: () => context.pop(),
         ),
       ),
@@ -102,140 +99,147 @@ class _CreateIssueScreenState extends State<CreateIssueScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildLabel('Issue Title'),
+              // Category chips
+              _label('Category'),
+              SizedBox(
+                height: 44,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: issueCategories.length,
+                  itemBuilder: (context, i) {
+                    final cat = issueCategories[i];
+                    final isSelected = cat == _selectedCategory;
+                    return GestureDetector(
+                      onTap: () => setState(() => _selectedCategory = cat),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        margin: const EdgeInsets.only(right: 8),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? const Color(0xFF6C63FF)
+                              : const Color(0xFF1A1A2E),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: isSelected
+                                ? const Color(0xFF6C63FF)
+                                : const Color(0xFF2A2A3E),
+                          ),
+                        ),
+                        child: Text(
+                          cat,
+                          style: TextStyle(
+                            color: isSelected
+                                ? Colors.white
+                                : const Color(0xFF9E9EBF),
+                            fontSize: 13,
+                            fontWeight: isSelected
+                                ? FontWeight.w600
+                                : FontWeight.normal,
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+
+              const SizedBox(height: 20),
+
+              // Title
+              _label('Issue Title'),
               TextFormField(
                 controller: _titleController,
                 style: const TextStyle(color: Colors.white),
                 decoration: const InputDecoration(
-                  hintText: 'e.g. Leaking tap in bathroom',
+                  hintText: 'e.g. Food was stale in mess today',
                   prefixIcon:
                       Icon(Icons.title, color: Color(0xFF6C63FF)),
                 ),
                 validator: (v) =>
-                    v!.isEmpty ? 'Please enter a title' : null,
+                    v!.trim().isEmpty ? 'Please enter a title' : null,
               ),
+
               const SizedBox(height: 16),
 
-              _buildLabel('Description'),
+              // Description
+              _label('Description'),
               TextFormField(
                 controller: _descController,
                 style: const TextStyle(color: Colors.white),
                 maxLines: 4,
                 decoration: const InputDecoration(
                   hintText: 'Describe the issue in detail...',
-                  prefixIcon:
-                      Icon(Icons.description_outlined, color: Color(0xFF6C63FF)),
+                  prefixIcon: Icon(Icons.description_outlined,
+                      color: Color(0xFF6C63FF)),
+                  alignLabelWithHint: true,
                 ),
                 validator: (v) =>
-                    v!.isEmpty ? 'Please describe the issue' : null,
+                    v!.trim().isEmpty ? 'Please describe the issue' : null,
               ),
-              const SizedBox(height: 16),
 
-              _buildLabel('Category'),
-              DropdownButtonFormField<String>(
-                value: _selectedCategory,
-                dropdownColor: const Color(0xFF1A1A2E),
-                style: const TextStyle(color: Colors.white),
-                decoration: const InputDecoration(
-                  prefixIcon: Icon(Icons.category_outlined,
-                      color: Color(0xFF6C63FF)),
-                ),
-                items: issueCategories
-                    .map((c) =>
-                        DropdownMenuItem(value: c, child: Text(c)))
-                    .toList(),
-                onChanged: (val) =>
-                    setState(() => _selectedCategory = val!),
-              ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 20),
 
-              _buildLabel('Priority'),
-              Row(
-                children: _priorities.map((p) {
-                  final isSelected = _selectedPriority == p['value'];
-                  return Expanded(
-                    child: GestureDetector(
-                      onTap: () =>
-                          setState(() => _selectedPriority = p['value'] as String),
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        margin: const EdgeInsets.only(right: 8),
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        decoration: BoxDecoration(
-                          color: isSelected
-                              ? (p['color'] as Color).withOpacity(0.2)
-                              : const Color(0xFF1A1A2E),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: isSelected
-                                ? p['color'] as Color
-                                : const Color(0xFF2A2A3E),
-                            width: isSelected ? 2 : 1,
-                          ),
-                        ),
-                        child: Column(
-                          children: [
-                            Icon(
-                              Icons.flag_rounded,
-                              color: isSelected
-                                  ? p['color'] as Color
-                                  : const Color(0xFF9E9EBF),
-                              size: 22,
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              p['label'] as String,
-                              style: TextStyle(
-                                color: isSelected
-                                    ? p['color'] as Color
-                                    : const Color(0xFF9E9EBF),
-                                fontWeight: isSelected
-                                    ? FontWeight.w600
-                                    : FontWeight.normal,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  );
-                }).toList(),
-              ),
-              const SizedBox(height: 16),
-
-              _buildLabel('Photos (Optional)'),
+              // Photo upload
+              _label('Photo Evidence (Optional)'),
               GestureDetector(
-                onTap: _pickImages,
+                onTap: _pickImage,
                 child: Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.all(20),
+                  height: 140,
                   decoration: BoxDecoration(
                     color: const Color(0xFF1A1A2E),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: const Color(0xFF2A2A3E),
-                      style: BorderStyle.solid,
-                    ),
+                    border: Border.all(color: const Color(0xFF2A2A3E)),
                   ),
-                  child: Column(
-                    children: [
-                      const Icon(Icons.add_photo_alternate_outlined,
-                          color: Color(0xFF6C63FF), size: 32),
-                      const SizedBox(height: 8),
-                      Text(
-                        _selectedImages.isEmpty
-                            ? 'Tap to add photos'
-                            : '${_selectedImages.length} photo(s) selected',
-                        style: const TextStyle(color: Color(0xFF9E9EBF)),
-                      ),
-                    ],
-                  ),
+                  child: _pickedImage != null
+                      ? ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: Stack(
+                            fit: StackFit.expand,
+                            children: [
+                              Image.file(
+                                File(_pickedImage!.path),
+                                fit: BoxFit.cover,
+                              ),
+                              Positioned(
+                                top: 8,
+                                right: 8,
+                                child: GestureDetector(
+                                  onTap: () =>
+                                      setState(() => _pickedImage = null),
+                                  child: Container(
+                                    decoration: const BoxDecoration(
+                                      color: Colors.black54,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(Icons.close,
+                                        color: Colors.white, size: 20),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                      : Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: const [
+                            Icon(Icons.add_photo_alternate_outlined,
+                                color: Color(0xFF6C63FF), size: 36),
+                            SizedBox(height: 8),
+                            Text(
+                              'Tap to add a photo',
+                              style: TextStyle(color: Color(0xFF9E9EBF)),
+                            ),
+                          ],
+                        ),
                 ),
               ),
 
               const SizedBox(height: 32),
 
+              // Submit
               ElevatedButton(
                 onPressed: _isSubmitting ? null : _submit,
                 child: _isSubmitting
@@ -245,11 +249,9 @@ class _CreateIssueScreenState extends State<CreateIssueScreen> {
                         child: CircularProgressIndicator(
                             color: Colors.white, strokeWidth: 2),
                       )
-                    : const Text(
-                        'Submit Issue',
+                    : const Text('Submit Issue',
                         style: TextStyle(
-                            fontSize: 16, fontWeight: FontWeight.w600),
-                      ),
+                            fontSize: 16, fontWeight: FontWeight.w600)),
               ),
               const SizedBox(height: 24),
             ],
@@ -259,17 +261,14 @@ class _CreateIssueScreenState extends State<CreateIssueScreen> {
     );
   }
 
-  Widget _buildLabel(String text) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Text(
-        text,
-        style: const TextStyle(
-          color: Colors.white,
-          fontWeight: FontWeight.w600,
-          fontSize: 14,
+  Widget _label(String text) => Padding(
+        padding: const EdgeInsets.only(bottom: 8),
+        child: Text(
+          text,
+          style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w600,
+              fontSize: 14),
         ),
-      ),
-    );
-  }
+      );
 }
