@@ -16,6 +16,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _roomController = TextEditingController();
+  final _adminCodeController = TextEditingController();
   String _selectedBlock = 'Block A';
   bool _obscurePassword = true;
 
@@ -29,6 +30,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     _emailController.dispose();
     _passwordController.dispose();
     _roomController.dispose();
+    _adminCodeController.dispose();
     super.dispose();
   }
 
@@ -41,6 +43,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       name: _nameController.text.trim(),
       roomNumber: _roomController.text.trim(),
       hostelBlock: _selectedBlock,
+      role: _adminCodeController.text.trim() == 'ADMIN123' ? 'admin' : 'student',
     );
     if (success && mounted) {
       context.go('/home');
@@ -163,6 +166,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           ),
                         ),
                       ],
+                    ),
+                    const SizedBox(height: 14),
+                    _buildField(
+                      controller: _adminCodeController,
+                      label: 'Admin Secret Code (Optional)',
+                      icon: Icons.admin_panel_settings_outlined,
                     ),
                     const SizedBox(height: 16),
 
