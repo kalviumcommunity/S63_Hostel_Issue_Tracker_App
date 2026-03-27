@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/issue_provider.dart';
@@ -55,7 +56,7 @@ class _StudentDashboardState extends State<StudentDashboard> {
       ),
       floatingActionButton: _currentIndex == 0
           ? FloatingActionButton.extended(
-              onPressed: () => Navigator.pushNamed(context, '/create-issue'),
+              onPressed: () => context.push('/create-issue'),
               backgroundColor: const Color(0xFF6C63FF),
               foregroundColor: Colors.white,
               elevation: 4,
