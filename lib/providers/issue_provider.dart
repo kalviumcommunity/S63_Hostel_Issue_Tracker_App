@@ -21,6 +21,8 @@ class IssueProvider extends ChangeNotifier {
   // Filtered getters
   List<IssueModel> get pendingIssues =>
       _issues.where((i) => i.status == statusPending).toList();
+  List<IssueModel> get assignedIssues =>
+      _issues.where((i) => i.status == statusAssigned).toList();
   List<IssueModel> get inProgressIssues =>
       _issues.where((i) => i.status == statusInProgress).toList();
   List<IssueModel> get resolvedIssues =>
@@ -64,12 +66,13 @@ class IssueProvider extends ChangeNotifier {
     _subscription = _firestore
         .collection('issues')
         .where('createdBy', isEqualTo: userId)
-        .orderBy('createdAt', descending: true)
         .snapshots()
         .listen((snapshot) {
       _issues = snapshot.docs
           .map((doc) => IssueModel.fromMap(doc.data(), doc.id))
           .toList();
+      // Sort locally to avoid Firestore composite index requirement
+      _issues.sort((a, b) => b.createdAt.compareTo(a.createdAt));
       notifyListeners();
     }, onError: (e) {
       _error = e.toString();
@@ -116,10 +119,20 @@ class IssueProvider extends ChangeNotifier {
     String? adminComment,
   }) async {
     try {
+      final now = DateTime.now().toIso8601String();
       final updates = <String, dynamic>{
         'status': newStatus,
-        'updatedAt': DateTime.now().toIso8601String(),
+        'updatedAt': now,
       };
+
+      if (newStatus == statusAssigned) {
+        updates['assignedAt'] = now;
+      } else if (newStatus == statusInProgress) {
+        updates['startedAt'] = now;
+      } else if (newStatus == statusResolved) {
+        updates['resolvedAt'] = now;
+      }
+
       if (adminComment != null && adminComment.isNotEmpty) {
         updates['adminComment'] = adminComment;
       }

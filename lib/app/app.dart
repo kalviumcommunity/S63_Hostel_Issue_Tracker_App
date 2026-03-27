@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import '../screens/splash_screen.dart';
 import '../screens/auth/login_screen.dart';
@@ -6,12 +7,23 @@ import '../screens/auth/register_screen.dart';
 import '../screens/home/home_screen.dart';
 import '../screens/issues/create_issue_screen.dart';
 import '../screens/issues/issue_detail_screen.dart';
+import '../screens/issues/issue_chat_screen.dart';
 
 class HostelIssueTrackerApp extends StatelessWidget {
   const HostelIssueTrackerApp({super.key});
 
   @override
   Widget build(BuildContext context) {
+    // Make status bar transparent for modern look
+    SystemChrome.setSystemUIOverlayStyle(
+      const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.dark,
+        systemNavigationBarColor: Colors.white,
+        systemNavigationBarIconBrightness: Brightness.dark,
+      ),
+    );
+
     return MaterialApp.router(
       title: 'Hostel Issue Tracker',
       debugShowCheckedModeBanner: false,
@@ -23,72 +35,102 @@ class HostelIssueTrackerApp extends StatelessWidget {
   ThemeData _buildTheme() {
     return ThemeData(
       useMaterial3: true,
+      fontFamily: 'Inter', // Requires google_fonts but we can let Flutter fallback to highly readable sans-serif
       colorScheme: ColorScheme.fromSeed(
         seedColor: const Color(0xFF6C63FF),
-        brightness: Brightness.dark,
+        brightness: Brightness.light,
+        surface: const Color(0xFFF9FAFB),
+        primary: const Color(0xFF6C63FF),
+        secondary: const Color(0xFF3ECFCF),
       ),
-      scaffoldBackgroundColor: const Color(0xFF0F0F1A),
-      cardColor: const Color(0xFF1A1A2E),
+      scaffoldBackgroundColor: const Color(0xFFF9FAFB),
+      cardTheme: CardThemeData(
+        color: Colors.white,
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: const BorderSide(color: Color(0xFFF3F4F6), width: 1.5),
+        ),
+      ),
       appBarTheme: const AppBarTheme(
-        backgroundColor: Color(0xFF0F0F1A),
-        foregroundColor: Colors.white,
+        backgroundColor: Colors.transparent,
+        foregroundColor: Color(0xFF111827),
         elevation: 0,
         centerTitle: true,
+        titleTextStyle: TextStyle(
+          color: Color(0xFF111827),
+          fontSize: 18,
+          fontWeight: FontWeight.w700,
+          letterSpacing: -0.5,
+        ),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           backgroundColor: const Color(0xFF6C63FF),
           foregroundColor: Colors.white,
-          shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12)),
-          minimumSize: const Size(double.infinity, 52),
+          elevation: 4,
+          shadowColor: const Color(0xFF6C63FF).withValues(alpha: 0.4),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          minimumSize: const Size(double.infinity, 56),
+          textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, letterSpacing: 0.5),
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: const Color(0xFF1A1A2E),
-        hintStyle: const TextStyle(color: Color(0xFF9E9EBF)),
-        labelStyle: const TextStyle(color: Color(0xFF9E9EBF)),
+        fillColor: Colors.white,
+        hintStyle: const TextStyle(color: Color(0xFF9CA3AF), fontSize: 15),
+        labelStyle: const TextStyle(color: Color(0xFF6B7280)),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide.none,
+          borderRadius: BorderRadius.circular(16),
+          borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide:
-              const BorderSide(color: Color(0xFF2A2A3E)),
+          borderRadius: BorderRadius.circular(16),
+          borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide:
-              const BorderSide(color: Color(0xFF6C63FF), width: 2),
+          borderRadius: BorderRadius.circular(16),
+          borderSide: const BorderSide(color: Color(0xFF6C63FF), width: 2),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: const BorderSide(color: Color(0xFFEF4444)),
         ),
       ),
       bottomNavigationBarTheme: const BottomNavigationBarThemeData(
-        backgroundColor: Color(0xFF1A1A2E),
+        backgroundColor: Colors.white,
+        elevation: 20,
         selectedItemColor: Color(0xFF6C63FF),
-        unselectedItemColor: Color(0xFF6C6685),
+        unselectedItemColor: Color(0xFF9CA3AF),
         showUnselectedLabels: true,
         type: BottomNavigationBarType.fixed,
+        selectedLabelStyle: TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
+        unselectedLabelStyle: TextStyle(fontWeight: FontWeight.w500, fontSize: 12),
       ),
     );
   }
 
   GoRouter get _router => GoRouter(
-    initialLocation: '/',
-    routes: [
-      GoRoute(path: '/', builder: (context, state) => const SplashScreen()),
-      GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
-      GoRoute(path: '/register', builder: (context, state) => const RegisterScreen()),
-      GoRoute(path: '/home', builder: (context, state) => const HomeScreen()),
-      GoRoute(
-          path: '/create-issue',
-          builder: (context, state) => const CreateIssueScreen()),
-      GoRoute(
-        path: '/issue/:id',
-        builder: (context, state) =>
-            IssueDetailScreen(issueId: state.pathParameters['id']!),
-      ),
-    ],
-  );
+        initialLocation: '/',
+        routes: [
+          GoRoute(path: '/', builder: (context, state) => const SplashScreen()),
+          GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
+          GoRoute(path: '/register', builder: (context, state) => const RegisterScreen()),
+          GoRoute(path: '/home', builder: (context, state) => const HomeScreen()),
+          GoRoute(
+              path: '/create-issue',
+              builder: (context, state) => const CreateIssueScreen()),
+          GoRoute(
+            path: '/issue/:id',
+            builder: (context, state) =>
+                IssueDetailScreen(issueId: state.pathParameters['id']!),
+          ),
+          GoRoute(
+            path: '/issue/:id/chat',
+            builder: (context, state) =>
+                IssueChatScreen(issueId: state.pathParameters['id']!),
+          ),
+        ],
+      );
 }

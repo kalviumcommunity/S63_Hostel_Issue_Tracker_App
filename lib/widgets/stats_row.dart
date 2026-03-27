@@ -21,25 +21,28 @@ class StatsRow extends StatelessWidget {
           child: _StatCard(
             label: 'Pending',
             count: pending,
-            color: const Color(0xFFFF6B6B),
+            iconColor: const Color(0xFFEF4444),
+            bgColor: const Color(0xFFFEE2E2),
             icon: Icons.hourglass_empty_rounded,
           ),
         ),
-        const SizedBox(width: 10),
+        const SizedBox(width: 12),
         Expanded(
           child: _StatCard(
             label: 'In Progress',
             count: inProgress,
-            color: const Color(0xFFFFB347),
+            iconColor: const Color(0xFFF59E0B),
+            bgColor: const Color(0xFFFEF3C7),
             icon: Icons.construction_rounded,
           ),
         ),
-        const SizedBox(width: 10),
+        const SizedBox(width: 12),
         Expanded(
           child: _StatCard(
             label: 'Resolved',
             count: resolved,
-            color: const Color(0xFF4CAF94),
+            iconColor: const Color(0xFF10B981),
+            bgColor: const Color(0xFFD1FAE5),
             icon: Icons.check_circle_outline_rounded,
           ),
         ),
@@ -51,42 +54,61 @@ class StatsRow extends StatelessWidget {
 class _StatCard extends StatelessWidget {
   final String label;
   final int count;
-  final Color color;
+  final Color iconColor;
+  final Color bgColor;
   final IconData icon;
 
   const _StatCard({
     required this.label,
     required this.count,
-    required this.color,
+    required this.iconColor,
+    required this.bgColor,
     required this.icon,
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 10),
+      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 12),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: color.withValues(alpha: 0.2)),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFF3F4F6), width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF111827).withValues(alpha: 0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         children: [
-          Icon(icon, color: color, size: 22),
-          const SizedBox(height: 6),
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: bgColor,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, color: iconColor, size: 22),
+          ),
+          const SizedBox(height: 12),
           Text(
             count.toString(),
-            style: TextStyle(
-              color: color,
-              fontSize: 22,
-              fontWeight: FontWeight.w800,
+            style: const TextStyle(
+              color: Color(0xFF111827),
+              fontSize: 24,
+              fontWeight: FontWeight.w900,
+              letterSpacing: -0.5,
             ),
           ),
+          const SizedBox(height: 4),
           Text(
             label,
             style: const TextStyle(
-              color: Color(0xFF9E9EBF),
-              fontSize: 10,
+              color: Color(0xFF6B7280),
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
             ),
             textAlign: TextAlign.center,
           ),

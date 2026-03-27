@@ -6,6 +6,7 @@ class UserModel {
   final String hostelBlock;
   final String role; // 'student' or 'admin'
   final String? profileImageUrl;
+  final String? fcmToken;
   final DateTime createdAt;
 
   UserModel({
@@ -16,6 +17,7 @@ class UserModel {
     required this.hostelBlock,
     required this.role,
     this.profileImageUrl,
+    this.fcmToken,
     required this.createdAt,
   });
 
@@ -28,6 +30,7 @@ class UserModel {
       hostelBlock: map['hostelBlock'] ?? '',
       role: map['role'] ?? 'student',
       profileImageUrl: map['profileImageUrl'],
+      fcmToken: map['fcmToken'],
       createdAt: DateTime.parse(map['createdAt'] ?? DateTime.now().toIso8601String()),
     );
   }
@@ -41,6 +44,7 @@ class UserModel {
       'hostelBlock': hostelBlock,
       'role': role,
       'profileImageUrl': profileImageUrl,
+      'fcmToken': fcmToken,
       'createdAt': createdAt.toIso8601String(),
     };
   }
