@@ -7,6 +7,7 @@ import '../screens/auth/register_screen.dart';
 import '../screens/home/home_screen.dart';
 import '../screens/issues/create_issue_screen.dart';
 import '../screens/issues/issue_detail_screen.dart';
+import '../screens/issues/issue_chat_screen.dart';
 
 class HostelIssueTrackerApp extends StatelessWidget {
   const HostelIssueTrackerApp({super.key});
@@ -124,6 +125,11 @@ class HostelIssueTrackerApp extends StatelessWidget {
             path: '/issue/:id',
             builder: (context, state) =>
                 IssueDetailScreen(issueId: state.pathParameters['id']!),
+          ),
+          GoRoute(
+            path: '/issue/:id/chat',
+            builder: (context, state) =>
+                IssueChatScreen(issueId: state.pathParameters['id']!),
           ),
         ],
       );
