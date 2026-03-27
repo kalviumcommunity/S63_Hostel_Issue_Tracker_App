@@ -36,14 +36,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   Future<void> _register() async {
     if (!_formKey.currentState!.validate()) return;
+    
     final auth = context.read<AuthProvider>();
+    final role = _adminCodeController.text.trim() == 'ADMIN123' ? 'admin' : 'student';
+
     final success = await auth.register(
       email: _emailController.text.trim(),
       password: _passwordController.text,
       name: _nameController.text.trim(),
       roomNumber: _roomController.text.trim(),
       hostelBlock: _selectedBlock,
-      role: _adminCodeController.text.trim() == 'ADMIN123' ? 'admin' : 'student',
+      role: role,
     );
     if (success && mounted) {
       context.go('/home');
@@ -55,29 +58,34 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final auth = context.watch<AuthProvider>();
 
     return Scaffold(
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Color(0xFF111827)),
+          onPressed: () => context.go('/login'),
+        ),
+      ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(height: 16),
-              IconButton(
-                icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
-                onPressed: () => context.go('/login'),
-              ),
-              const SizedBox(height: 16),
               const Text(
                 'Create Account',
                 style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 28,
-                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF111827),
+                  fontSize: 32,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -1,
                 ),
               ),
+              const SizedBox(height: 8),
               const Text(
                 'Join to start tracking hostel issues',
-                style: TextStyle(color: Color(0xFF9E9EBF), fontSize: 15),
+                style: TextStyle(color: Color(0xFF6B7280), fontSize: 16),
               ),
               const SizedBox(height: 32),
 
@@ -91,7 +99,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       icon: Icons.person_outline,
                       validator: (v) => v!.isEmpty ? 'Required' : null,
                     ),
-                    const SizedBox(height: 14),
+                    const SizedBox(height: 16),
                     _buildField(
                       controller: _emailController,
                       label: 'Email',
@@ -99,30 +107,26 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       keyboardType: TextInputType.emailAddress,
                       validator: (v) => v!.isEmpty ? 'Required' : null,
                     ),
-                    const SizedBox(height: 14),
+                    const SizedBox(height: 16),
                     TextFormField(
                       controller: _passwordController,
                       obscureText: _obscurePassword,
-                      style: const TextStyle(color: Colors.white),
+                      style: const TextStyle(color: Color(0xFF111827), fontWeight: FontWeight.w500),
                       decoration: InputDecoration(
                         labelText: 'Password',
-                        prefixIcon: const Icon(Icons.lock_outline,
-                            color: Color(0xFF6C63FF)),
+                        prefixIcon: const Icon(Icons.lock_outline, color: Color(0xFF9CA3AF)),
                         suffixIcon: IconButton(
                           icon: Icon(
-                            _obscurePassword
-                                ? Icons.visibility_off
-                                : Icons.visibility,
-                            color: const Color(0xFF9E9EBF),
+                            _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                            color: const Color(0xFF9CA3AF),
                           ),
-                          onPressed: () => setState(
-                              () => _obscurePassword = !_obscurePassword),
+                          onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
                         ),
                       ),
-                      validator: (v) =>
-                          v!.length < 6 ? 'Min 6 characters' : null,
+                      validator: (v) => v!.length < 6 ? 'Min 6 characters' : null,
                     ),
-                    const SizedBox(height: 14),
+                    const SizedBox(height: 16),
+                    
                     Row(
                       children: [
                         Expanded(
@@ -137,93 +141,68 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         Expanded(
                           child: DropdownButtonFormField<String>(
                             value: _selectedBlock,
-                            dropdownColor: const Color(0xFF1A1A2E),
-                            style: const TextStyle(color: Colors.white),
-                            decoration: InputDecoration(
+                            dropdownColor: Colors.white,
+                            style: const TextStyle(color: Color(0xFF111827), fontWeight: FontWeight.w500),
+                            icon: const Icon(Icons.keyboard_arrow_down_rounded, color: Color(0xFF9CA3AF)),
+                            decoration: const InputDecoration(
                               labelText: 'Block',
-                              prefixIcon: const Icon(Icons.business_outlined,
-                                  color: Color(0xFF6C63FF)),
-                              filled: true,
-                              fillColor: const Color(0xFF1A1A2E),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide.none,
-                              ),
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: const BorderSide(
-                                    color: Color(0xFF2A2A3E)),
-                              ),
+                              prefixIcon: Icon(Icons.business_outlined, color: Color(0xFF9CA3AF)),
                             ),
-                            items: _blocks
-                                .map((b) => DropdownMenuItem(
-                                      value: b,
-                                      child: Text(b),
-                                    ))
-                                .toList(),
-                            onChanged: (val) =>
-                                setState(() => _selectedBlock = val!),
+                            items: _blocks.map((b) => DropdownMenuItem(value: b, child: Text(b))).toList(),
+                            onChanged: (val) => setState(() => _selectedBlock = val!),
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 14),
+                    const SizedBox(height: 16),
+                    
                     _buildField(
                       controller: _adminCodeController,
                       label: 'Admin Secret Code (Optional)',
                       icon: Icons.admin_panel_settings_outlined,
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 32),
 
                     if (auth.error != null)
                       Container(
-                        width: double.infinity,
                         padding: const EdgeInsets.all(12),
+                        margin: const EdgeInsets.only(bottom: 24),
                         decoration: BoxDecoration(
-                          color: Colors.redAccent.withOpacity(0.15),
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(
-                              color: Colors.redAccent.withOpacity(0.3)),
+                          color: const Color(0xFFFEF2F2),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: const Color(0xFFFECACA)),
                         ),
                         child: Text(
                           auth.error!,
-                          style: const TextStyle(color: Colors.redAccent),
+                          style: const TextStyle(color: Color(0xFFB91C1C), fontSize: 14),
                           textAlign: TextAlign.center,
                         ),
                       ),
-
-                    const SizedBox(height: 24),
+                      
                     ElevatedButton(
                       onPressed: auth.isLoading ? null : _register,
                       child: auth.isLoading
                           ? const SizedBox(
-                              height: 22,
-                              width: 22,
-                              child: CircularProgressIndicator(
-                                  color: Colors.white, strokeWidth: 2),
+                              height: 22, width: 22,
+                              child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
                             )
-                          : const Text('Create Account',
-                              style: TextStyle(
-                                  fontSize: 16, fontWeight: FontWeight.w600)),
+                          : const Text('Create Account'),
                     ),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 24),
+                    
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Text('Already have an account? ',
-                            style: TextStyle(color: Color(0xFF9E9EBF))),
+                        const Text('Already have an account? ', style: TextStyle(color: Color(0xFF6B7280))),
                         GestureDetector(
                           onTap: () => context.go('/login'),
-                          child: const Text(
-                            'Sign In',
-                            style: TextStyle(
-                              color: Color(0xFF6C63FF),
-                              fontWeight: FontWeight.w600,
-                            ),
+                          child: const Text('Sign In',
+                            style: TextStyle(color: Color(0xFF6C63FF), fontWeight: FontWeight.w700),
                           ),
                         ),
                       ],
                     ),
+                    const SizedBox(height: 24),
                   ],
                 ),
               ),
@@ -244,10 +223,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
     return TextFormField(
       controller: controller,
       keyboardType: keyboardType,
-      style: const TextStyle(color: Colors.white),
+      style: const TextStyle(color: Color(0xFF111827), fontWeight: FontWeight.w500),
       decoration: InputDecoration(
         labelText: label,
-        prefixIcon: Icon(icon, color: const Color(0xFF6C63FF)),
+        prefixIcon: Icon(icon, color: const Color(0xFF9CA3AF)),
       ),
       validator: validator,
     );

@@ -1,139 +1,103 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../models/issue_model.dart';
 import '../../providers/issue_provider.dart';
 import '../../widgets/issue_card.dart';
 
-/// Student's own complaints with status tabs
-class MyComplaintsScreen extends StatefulWidget {
+class MyComplaintsScreen extends StatelessWidget {
   const MyComplaintsScreen({super.key});
 
   @override
-  State<MyComplaintsScreen> createState() => _MyComplaintsScreenState();
-}
-
-class _MyComplaintsScreenState extends State<MyComplaintsScreen>
-    with SingleTickerProviderStateMixin {
-  late TabController _tabController;
-
-  @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(length: 3, vsync: this);
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final provider = context.watch<IssueProvider>();
+    final issueProvider = context.watch<IssueProvider>();
 
     return SafeArea(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Padding(
-            padding: EdgeInsets.fromLTRB(20, 20, 20, 0),
-            child: Text(
-              'My Complaints',
-              style: TextStyle(
+      child: DefaultTabController(
+        length: 3,
+        child: Column(
+          children: [
+            // Header
+            Container(
+              padding: const EdgeInsets.fromLTRB(24, 20, 24, 16),
+              decoration: BoxDecoration(
                 color: Colors.white,
-                fontSize: 22,
-                fontWeight: FontWeight.w700,
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF111827).withValues(alpha: 0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  )
+                ]
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'My Complaints',
+                    style: TextStyle(
+                      color: Color(0xFF111827),
+                      fontSize: 28,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: -1,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Container(
+                    height: 52,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF3F4F6),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: const Color(0xFFE5E7EB)),
+                    ),
+                    padding: const EdgeInsets.all(4),
+                    child: TabBar(
+                      indicator: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF111827).withValues(alpha: 0.1),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      labelColor: const Color(0xFF111827),
+                      unselectedLabelColor: const Color(0xFF6B7280),
+                      labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                      unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                      dividerColor: Colors.transparent,
+                      tabs: const [
+                        Tab(text: 'Pending'),
+                        Tab(text: 'In Progress'),
+                        Tab(text: 'Resolved'),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
-          ),
-          const SizedBox(height: 4),
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 20),
-            child: Text(
-              'Track the status of your reported issues',
-              style: TextStyle(color: Color(0xFF9E9EBF), fontSize: 13),
-            ),
-          ),
-          const SizedBox(height: 16),
-
-          // Tab bar
-          Container(
-            margin: const EdgeInsets.symmetric(horizontal: 20),
-            decoration: BoxDecoration(
-              color: const Color(0xFF1A1A2E),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: TabBar(
-              controller: _tabController,
-              indicatorSize: TabBarIndicatorSize.tab,
-              indicator: BoxDecoration(
-                color: const Color(0xFF6C63FF),
-                borderRadius: BorderRadius.circular(10),
+            
+            // Tab Views
+            Expanded(
+              child: TabBarView(
+                physics: const BouncingScrollPhysics(),
+                children: [
+                  _IssueListView(issues: issueProvider.pendingIssues),
+                  _IssueListView(issues: issueProvider.inProgressIssues),
+                  _IssueListView(issues: issueProvider.resolvedIssues),
+                ],
               ),
-              labelColor: Colors.white,
-              unselectedLabelColor: const Color(0xFF9E9EBF),
-              labelStyle: const TextStyle(
-                  fontWeight: FontWeight.w600, fontSize: 13),
-              dividerColor: Colors.transparent,
-              tabs: [
-                Tab(
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.hourglass_empty, size: 14),
-                      const SizedBox(width: 4),
-                      Text('Pending (${provider.pendingIssues.length})'),
-                    ],
-                  ),
-                ),
-                Tab(
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.construction, size: 14),
-                      const SizedBox(width: 4),
-                      Text('Active (${provider.inProgressIssues.length})'),
-                    ],
-                  ),
-                ),
-                Tab(
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.check_circle_outline, size: 14),
-                      const SizedBox(width: 4),
-                      Text('Done (${provider.resolvedIssues.length})'),
-                    ],
-                  ),
-                ),
-              ],
             ),
-          ),
-
-          const SizedBox(height: 12),
-
-          Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              children: [
-                _IssueList(issues: provider.pendingIssues, emptyMsg: 'No pending issues 🎉'),
-                _IssueList(issues: provider.inProgressIssues, emptyMsg: 'Nothing in progress'),
-                _IssueList(issues: provider.resolvedIssues, emptyMsg: 'No resolved issues yet'),
-              ],
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 }
 
-class _IssueList extends StatelessWidget {
-  final List<IssueModel> issues;
-  final String emptyMsg;
-
-  const _IssueList({required this.issues, required this.emptyMsg});
+class _IssueListView extends StatelessWidget {
+  final List issues;
+  const _IssueListView({required this.issues});
 
   @override
   Widget build(BuildContext context) {
@@ -142,13 +106,24 @@ class _IssueList extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.inbox_outlined,
-                size: 60, color: Colors.white.withValues(alpha: 0.1)),
-            const SizedBox(height: 12),
-            Text(
-              emptyMsg,
+            const Icon(Icons.assignment_turned_in_rounded, size: 80, color: Color(0xFFE5E7EB)),
+            const SizedBox(height: 16),
+            const Text(
+              'No Issues Found',
               style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.3), fontSize: 15),
+                  color: Color(0xFF111827),
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.5),
+            ),
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 40),
+              child: const Text(
+                'You don\'t have any complaints in this category right now.',
+                style: TextStyle(color: Color(0xFF6B7280), height: 1.5),
+                textAlign: TextAlign.center,
+              ),
             ),
           ],
         ),
@@ -156,9 +131,12 @@ class _IssueList extends StatelessWidget {
     }
 
     return ListView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
+      padding: const EdgeInsets.all(24),
+      physics: const BouncingScrollPhysics(),
       itemCount: issues.length,
-      itemBuilder: (context, i) => IssueCard(issue: issues[i]),
+      itemBuilder: (context, index) {
+        return IssueCard(issue: issues[index]);
+      },
     );
   }
 }

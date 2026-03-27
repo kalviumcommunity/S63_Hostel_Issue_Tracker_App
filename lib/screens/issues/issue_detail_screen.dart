@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:intl/intl.dart';
 import '../../models/issue_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/issue_provider.dart';
@@ -24,308 +24,445 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
     super.dispose();
   }
 
-  Color _statusColor(String status) {
-    switch (status) {
-      case statusInProgress: return const Color(0xFFFFB347);
-      case statusResolved: return const Color(0xFF4CAF94);
-      default: return const Color(0xFFFF6B6B);
-    }
-  }
-
-  String _statusLabel(String status) {
-    switch (status) {
-      case statusPending: return '🔴  Pending';
-      case statusInProgress: return '🟡  In Progress';
-      case statusResolved: return '🟢  Resolved';
-      default: return status;
-    }
-  }
-
-  Future<void> _updateStatus(
-      IssueProvider provider, String issueId, String newStatus) async {
+  Future<void> _updateStatus(String newStatus) async {
+    final issueProvider = context.read<IssueProvider>();
     setState(() => _isUpdating = true);
-    await provider.updateIssue(
-      issueId: issueId,
+
+    final success = await issueProvider.updateIssue(
+      issueId: widget.issueId,
       newStatus: newStatus,
-      adminComment: _commentController.text.trim().isNotEmpty
-          ? _commentController.text.trim()
-          : null,
+      adminComment: _commentController.text.trim(),
     );
-    setState(() => _isUpdating = false);
+
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Status updated to: ${_statusLabel(newStatus)}'),
-          backgroundColor: _statusColor(newStatus),
-        ),
-      );
-      context.pop();
+      setState(() => _isUpdating = false);
+      if (success) {
+        if (context.canPop()) context.pop();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Status updated to $newStatus'),
+            backgroundColor: const Color(0xFF10B981), // Emerald green
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(issueProvider.error ?? 'Failed to update status'),
+            backgroundColor: const Color(0xFFEF4444),
+          ),
+        );
+      }
     }
+  }
+
+  Color _getStatusColor(String status) {
+    if (status == statusInProgress) return const Color(0xFFF59E0B);
+    if (status == statusResolved) return const Color(0xFF10B981);
+    return const Color(0xFFEF4444);
+  }
+
+  Color _getStatusBgColor(String status) {
+    if (status == statusInProgress) return const Color(0xFFFEF3C7);
+    if (status == statusResolved) return const Color(0xFFD1FAE5);
+    return const Color(0xFFFEE2E2);
+  }
+
+  String _getStatusLabel(String status) {
+    if (status == statusPending) return 'Pending';
+    if (status == statusInProgress) return 'In Progress';
+    if (status == statusResolved) return 'Resolved';
+    return status;
   }
 
   @override
   Widget build(BuildContext context) {
-    final provider = context.watch<IssueProvider>();
-    final auth = context.watch<AuthProvider>();
-    final issue = provider.getById(widget.issueId);
-    final isAdmin = auth.userModel?.role == 'admin';
+    final issueProvider = context.watch<IssueProvider>();
+    final issue = issueProvider.getById(widget.issueId);
+    final user = context.watch<AuthProvider>().userModel;
+    final isAdmin = user?.role == 'admin';
 
     if (issue == null) {
       return Scaffold(
-        appBar: AppBar(),
-        body: const Center(
-          child: Text('Issue not found',
-              style: TextStyle(color: Color(0xFF9E9EBF))),
+        backgroundColor: const Color(0xFFF9FAFB),
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Color(0xFF111827)),
+            onPressed: () {
+              if (context.canPop()) context.pop();
+            },
+          ),
         ),
+        body: const Center(
+            child: Text('Issue not found or deleted.',
+                style: TextStyle(color: Color(0xFF6B7280)))),
       );
     }
 
+    final isResolved = issue.status == statusResolved;
+
     return Scaffold(
+      backgroundColor: const Color(0xFFF9FAFB),
       appBar: AppBar(
-        title: const Text('Issue Details',
-            style: TextStyle(fontWeight: FontWeight.w700)),
+        backgroundColor: Colors.white,
+        elevation: 0,
+        centerTitle: true,
+        title: const Text('Issue Details', style: TextStyle(color: Color(0xFF111827))),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios),
-          onPressed: () => context.pop(),
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Color(0xFF111827)),
+          onPressed: () {
+            if (context.canPop()) context.pop();
+          },
+        ),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1),
+          child: Container(color: const Color(0xFFF3F4F6), height: 1),
         ),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(24),
+        physics: const BouncingScrollPhysics(),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Status badge
+            // Status Badge
             Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               decoration: BoxDecoration(
-                color: _statusColor(issue.status).withValues(alpha: 0.15),
+                color: _getStatusBgColor(issue.status),
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                    color: _statusColor(issue.status).withValues(alpha: 0.4)),
               ),
-              child: Text(
-                _statusLabel(issue.status),
-                style: TextStyle(
-                    color: _statusColor(issue.status),
-                    fontWeight: FontWeight.w600,
-                    fontSize: 13),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    issue.status == statusResolved
+                        ? Icons.check_circle_rounded
+                        : Icons.info_rounded,
+                    color: _getStatusColor(issue.status),
+                    size: 18,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    _getStatusLabel(issue.status).toUpperCase(),
+                    style: TextStyle(
+                      color: _getStatusColor(issue.status),
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 1.0,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
               ),
             ),
-
-            const SizedBox(height: 14),
+            const SizedBox(height: 24),
 
             // Title
             Text(
               issue.title,
               style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 22,
-                  fontWeight: FontWeight.w700),
+                color: Color(0xFF111827),
+                fontSize: 26,
+                fontWeight: FontWeight.w900,
+                height: 1.2,
+                letterSpacing: -0.5,
+              ),
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 16),
 
-            // Category + location
-            Row(children: [
-              const Icon(Icons.category_outlined,
-                  size: 14, color: Color(0xFF9E9EBF)),
-              const SizedBox(width: 4),
-              Text(issue.category,
-                  style: const TextStyle(
-                      color: Color(0xFF9E9EBF), fontSize: 13)),
-              const SizedBox(width: 12),
-              const Icon(Icons.location_on_outlined,
-                  size: 14, color: Color(0xFF9E9EBF)),
-              const SizedBox(width: 4),
-              Text(issue.location,
-                  style: const TextStyle(
-                      color: Color(0xFF9E9EBF), fontSize: 13)),
-            ]),
-
-            const SizedBox(height: 20),
-
-            // Description
-            _sectionTitle('Description'),
-            Text(
-              issue.description,
-              style: const TextStyle(
-                  color: Color(0xFFCCCCDD), fontSize: 15, height: 1.6),
-            ),
-
-            const SizedBox(height: 20),
-
-            // Photo
-            if (issue.imageUrl != null) ...[
-              _sectionTitle('Photo Evidence'),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: CachedNetworkImage(
-                  imageUrl: issue.imageUrl!,
-                  width: double.infinity,
-                  height: 200,
-                  fit: BoxFit.cover,
-                  placeholder: (_, __) => Container(
-                    height: 200,
-                    color: const Color(0xFF1A1A2E),
-                    child: const Center(
-                      child: CircularProgressIndicator(
-                          color: Color(0xFF6C63FF)),
+            // Metadata Chips
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF3F4F6),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.folder_outlined,
+                          color: Color(0xFF6B7280), size: 16),
+                      const SizedBox(width: 6),
+                      Text(issue.category,
+                          style: const TextStyle(
+                              color: Color(0xFF4B5563),
+                              fontWeight: FontWeight.w600,
+                              fontSize: 13)),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF3F4F6),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.location_on_outlined,
+                            color: Color(0xFF6B7280), size: 16),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(issue.location,
+                              style: const TextStyle(
+                                  color: Color(0xFF4B5563),
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 13),
+                              overflow: TextOverflow.ellipsis),
+                        ),
+                      ],
                     ),
                   ),
-                  errorWidget: (_, __, ___) => Container(
-                    height: 200,
-                    color: const Color(0xFF1A1A2E),
-                    child: const Icon(Icons.broken_image_outlined,
-                        color: Color(0xFF9E9EBF)),
+                ),
+              ],
+            ),
+            const SizedBox(height: 32),
+
+            // Description
+            const Text('Description',
+                style: TextStyle(
+                    color: Color(0xFF111827),
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800)),
+            const SizedBox(height: 12),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: const Color(0xFFF3F4F6)),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF111827).withValues(alpha: 0.03),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  )
+                ]
+              ),
+              child: Text(
+                issue.description,
+                style: const TextStyle(
+                    color: Color(0xFF4B5563), fontSize: 16, height: 1.6),
+              ),
+            ),
+            const SizedBox(height: 32),
+
+            // Image
+            if (issue.imageUrl != null) ...[
+              const Text('Photo Evidence',
+                  style: TextStyle(
+                      color: Color(0xFF111827),
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800)),
+              const SizedBox(height: 12),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(20),
+                child: Container(
+                  height: 250,
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF3F4F6),
+                    border: Border.all(color: const Color(0xFFE5E7EB)),
+                  ),
+                  child: Image.network(
+                    issue.imageUrl!,
+                    fit: BoxFit.cover,
+                    loadingBuilder: (context, child, loadingProgress) {
+                      if (loadingProgress == null) return child;
+                      return const Center(
+                          child: CircularProgressIndicator(
+                              color: Color(0xFF6C63FF)));
+                    },
+                    errorBuilder: (context, error, stackTrace) {
+                      return const Center(
+                        child: Icon(Icons.broken_image_rounded,
+                            size: 40, color: Color(0xFF9CA3AF)),
+                      );
+                    },
                   ),
                 ),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 32),
             ],
 
-            // Reported by
-            _sectionTitle('Reported By'),
-            _InfoRow(
-              icon: Icons.person_outline,
-              value: issue.createdByName,
-            ),
-            const SizedBox(height: 6),
-            _InfoRow(
-              icon: Icons.access_time,
-              value: _formatDate(issue.createdAt),
+            // Reporter Details
+            const Text('Reported By',
+                style: TextStyle(
+                    color: Color(0xFF111827),
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800)),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                CircleAvatar(
+                  radius: 24,
+                  backgroundColor: const Color(0xFF6C63FF).withValues(alpha: 0.1),
+                  child: Text(
+                    issue.createdByName[0].toUpperCase(),
+                    style: const TextStyle(
+                        color: Color(0xFF6C63FF),
+                        fontWeight: FontWeight.w800,
+                        fontSize: 20),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(issue.createdByName,
+                        style: const TextStyle(
+                            color: Color(0xFF111827),
+                            fontWeight: FontWeight.w700,
+                            fontSize: 16)),
+                    const SizedBox(height: 4),
+                    Text(
+                        DateFormat('MMM dd, yyyy - hh:mm a')
+                            .format(issue.createdAt),
+                        style: const TextStyle(
+                            color: Color(0xFF6B7280), fontSize: 13)),
+                  ],
+                ),
+              ],
             ),
 
-            // Admin comment
+            // Admin Comment Display (if exists)
             if (issue.adminComment != null &&
                 issue.adminComment!.isNotEmpty) ...[
-              const SizedBox(height: 20),
-              _sectionTitle('Admin Comment'),
+              const SizedBox(height: 32),
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.all(14),
+                padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color:
-                      const Color(0xFF4CAF94).withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                      color: const Color(0xFF4CAF94)
-                          .withValues(alpha: 0.3)),
+                  color: const Color(0xFF6C63FF).withValues(alpha: 0.05),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: const Color(0xFF6C63FF).withValues(alpha: 0.2)),
                 ),
-                child: Text(
-                  issue.adminComment!,
-                  style: const TextStyle(
-                      color: Color(0xFF4CAF94), height: 1.5),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.admin_panel_settings_rounded,
+                            color: Color(0xFF6C63FF), size: 20),
+                        const SizedBox(width: 8),
+                        const Text('Admin Response',
+                            style: TextStyle(
+                                color: Color(0xFF6C63FF),
+                                fontWeight: FontWeight.w800,
+                                fontSize: 15)),
+                        const Spacer(),
+                        if (issue.updatedAt != null)
+                          Text(
+                            DateFormat('MMM dd').format(issue.updatedAt!),
+                            style: const TextStyle(
+                                color: Color(0xFF9CA3AF), fontSize: 12),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      issue.adminComment!,
+                      style: const TextStyle(
+                          color: Color(0xFF111827), fontSize: 15, height: 1.5),
+                    ),
+                  ],
                 ),
               ),
             ],
 
-            // ── Admin controls ──────────────────────────────────────
-            if (isAdmin && issue.status != statusResolved) ...[
-              const SizedBox(height: 28),
-              _sectionTitle('Update Status'),
-              TextFormField(
+            // -----------------------------------------------------------------
+            // ADMIN CONTROLS SECTION
+            // -----------------------------------------------------------------
+            if (isAdmin && !isResolved) ...[
+              const SizedBox(height: 40),
+              const Divider(color: Color(0xFFE5E7EB)),
+              const SizedBox(height: 24),
+              const Text('Admin Actions',
+                  style: TextStyle(
+                      color: Color(0xFF111827),
+                      fontSize: 22,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: -0.5)),
+              const SizedBox(height: 16),
+              TextField(
                 controller: _commentController,
-                style: const TextStyle(color: Colors.white),
-                maxLines: 2,
+                maxLines: 3,
+                style: const TextStyle(color: Color(0xFF111827), fontWeight: FontWeight.w500),
                 decoration: const InputDecoration(
-                  hintText: 'Add a comment for the student (optional)',
-                  prefixIcon: Icon(Icons.comment_outlined,
-                      color: Color(0xFF6C63FF)),
+                  labelText: 'Add a response or update for the student',
                   alignLabelWithHint: true,
                 ),
               ),
-              const SizedBox(height: 14),
-              if (issue.status == statusPending)
-                _StatusButton(
-                  label: 'Mark as In Progress',
-                  color: const Color(0xFFFFB347),
-                  icon: Icons.construction,
-                  isLoading: _isUpdating,
-                  onTap: () => _updateStatus(
-                      provider, issue.id, statusInProgress),
-                ),
-              if (issue.status == statusInProgress)
-                _StatusButton(
-                  label: 'Mark as Resolved',
-                  color: const Color(0xFF4CAF94),
-                  icon: Icons.check_circle_outline,
-                  isLoading: _isUpdating,
-                  onTap: () =>
-                      _updateStatus(provider, issue.id, statusResolved),
-                ),
-            ],
+              const SizedBox(height: 24),
 
-            const SizedBox(height: 32),
+              if (_isUpdating)
+                const Center(child: CircularProgressIndicator(color: Color(0xFF6C63FF)))
+              else
+                Row(
+                  children: [
+                    if (issue.status == statusPending)
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () => _updateStatus(statusInProgress),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: const Color(0xFFF59E0B),
+                            side: const BorderSide(color: Color(0xFFF59E0B), width: 1.5),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                            minimumSize: const Size(0, 56),
+                            backgroundColor: Colors.white,
+                          ),
+                          child: const Text('Mark In Progress', style: TextStyle(fontWeight: FontWeight.w700)),
+                        ),
+                      ),
+                    if (issue.status == statusPending) const SizedBox(width: 16),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () => _updateStatus(statusResolved),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF10B981),
+                          foregroundColor: Colors.white,
+                          elevation: 4,
+                          shadowColor: const Color(0xFF10B981).withValues(alpha: 0.4),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          minimumSize: const Size(0, 56),
+                        ),
+                        child: const Text('Mark Resolved', style: TextStyle(fontWeight: FontWeight.w700)),
+                      ),
+                    ),
+                  ],
+                ),
+              const SizedBox(height: 48),
+            ] else if (isResolved) ...[
+              const SizedBox(height: 40),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 24),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFD1FAE5),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.3)),
+                ),
+                child: const Column(
+                  children: [
+                    Icon(Icons.verified_rounded, size: 48, color: Color(0xFF10B981)),
+                    SizedBox(height: 12),
+                    Text('This issue is resolved.',
+                        style: TextStyle(
+                            color: Color(0xFF065F46),
+                            fontWeight: FontWeight.w700,
+                            fontSize: 16)),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 48),
+            ],
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _sectionTitle(String text) => Padding(
-        padding: const EdgeInsets.only(bottom: 10),
-        child: Text(text,
-            style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w700,
-                fontSize: 15)),
-      );
-
-  String _formatDate(DateTime dt) =>
-      '${dt.day}/${dt.month}/${dt.year}  ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
-}
-
-class _InfoRow extends StatelessWidget {
-  final IconData icon;
-  final String value;
-  const _InfoRow({required this.icon, required this.value});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Icon(icon, size: 16, color: const Color(0xFF9E9EBF)),
-        const SizedBox(width: 8),
-        Text(value,
-            style:
-                const TextStyle(color: Color(0xFFCCCCDD), fontSize: 14)),
-      ],
-    );
-  }
-}
-
-class _StatusButton extends StatelessWidget {
-  final String label;
-  final Color color;
-  final IconData icon;
-  final bool isLoading;
-  final VoidCallback onTap;
-
-  const _StatusButton({
-    required this.label,
-    required this.color,
-    required this.icon,
-    required this.isLoading,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return OutlinedButton.icon(
-      onPressed: isLoading ? null : onTap,
-      icon: isLoading
-          ? const SizedBox(
-              width: 18,
-              height: 18,
-              child: CircularProgressIndicator(strokeWidth: 2))
-          : Icon(icon, color: color),
-      label: Text(label,
-          style: TextStyle(color: color, fontWeight: FontWeight.w600)),
-      style: OutlinedButton.styleFrom(
-        minimumSize: const Size(double.infinity, 50),
-        side: BorderSide(color: color),
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
     );
   }

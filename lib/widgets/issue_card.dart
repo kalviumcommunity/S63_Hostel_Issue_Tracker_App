@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../models/issue_model.dart';
+import 'package:intl/intl.dart';
 
 class IssueCard extends StatelessWidget {
   final IssueModel issue;
@@ -9,9 +10,17 @@ class IssueCard extends StatelessWidget {
 
   Color get _statusColor {
     switch (issue.status) {
-      case statusInProgress: return const Color(0xFFFFB347);
-      case statusResolved: return const Color(0xFF4CAF94);
-      default: return const Color(0xFFFF6B6B);
+      case statusInProgress: return const Color(0xFFF59E0B); // Amber
+      case statusResolved: return const Color(0xFF10B981); // Emerald
+      default: return const Color(0xFFEF4444); // Red
+    }
+  }
+
+  Color get _statusBgColor {
+    switch (issue.status) {
+      case statusInProgress: return const Color(0xFFFEF3C7);
+      case statusResolved: return const Color(0xFFD1FAE5);
+      default: return const Color(0xFFFEE2E2);
     }
   }
 
@@ -45,24 +54,31 @@ class IssueCard extends StatelessWidget {
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: const Color(0xFF1A1A2E),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: const Color(0xFF2A2A3E)),
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: const Color(0xFFF3F4F6)),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF111827).withValues(alpha: 0.03),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Category icon
             Container(
-              width: 46,
-              height: 46,
+              width: 48,
+              height: 48,
               decoration: BoxDecoration(
-                color: _statusColor.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(12),
+                color: _statusBgColor,
+                borderRadius: BorderRadius.circular(14),
               ),
-              child: Icon(_categoryIcon, color: _statusColor, size: 22),
+              child: Icon(_categoryIcon, color: _statusColor, size: 24),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 16),
 
             // Content
             Expanded(
@@ -75,56 +91,57 @@ class IssueCard extends StatelessWidget {
                         child: Text(
                           issue.title,
                           style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 14,
+                            color: Color(0xFF111827),
+                            fontWeight: FontWeight.w700,
+                            fontSize: 15,
+                            letterSpacing: -0.3,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
                       const SizedBox(width: 8),
-                      _Badge(label: _statusLabel, color: _statusColor),
+                      _Badge(label: _statusLabel, color: _statusColor, bgColor: _statusBgColor),
                     ],
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 6),
                   Text(
                     issue.description,
                     style: const TextStyle(
-                        color: Color(0xFF9E9EBF),
-                        fontSize: 12,
+                        color: Color(0xFF6B7280),
+                        fontSize: 13,
                         height: 1.4),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 10),
                   Row(children: [
-                    const Icon(Icons.location_on_outlined,
-                        size: 12, color: Color(0xFF6C6685)),
-                    const SizedBox(width: 3),
+                    const Icon(Icons.location_on_rounded,
+                        size: 14, color: Color(0xFF9CA3AF)),
+                    const SizedBox(width: 4),
                     Text(issue.location,
                         style: const TextStyle(
-                            color: Color(0xFF6C6685), fontSize: 11)),
+                            color: Color(0xFF9CA3AF), fontSize: 12, fontWeight: FontWeight.w500)),
                     const Spacer(),
-                    const Icon(Icons.access_time,
-                        size: 12, color: Color(0xFF6C6685)),
-                    const SizedBox(width: 3),
+                    const Icon(Icons.access_time_rounded,
+                        size: 14, color: Color(0xFF9CA3AF)),
+                    const SizedBox(width: 4),
                     Text(
                       _shortDate(issue.createdAt),
                       style: const TextStyle(
-                          color: Color(0xFF6C6685), fontSize: 11),
+                          color: Color(0xFF9CA3AF), fontSize: 12, fontWeight: FontWeight.w500),
                     ),
                   ]),
                   // Admin: show reporter name
                   if (isAdmin) ...[
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 6),
                     Row(children: [
-                      const Icon(Icons.person_outline,
-                          size: 12, color: Color(0xFF6C6685)),
-                      const SizedBox(width: 3),
+                      const Icon(Icons.person_rounded,
+                          size: 14, color: Color(0xFF9CA3AF)),
+                      const SizedBox(width: 4),
                       Text(issue.createdByName,
                           style: const TextStyle(
-                              color: Color(0xFF6C6685), fontSize: 11)),
+                              color: Color(0xFF9CA3AF), fontSize: 12, fontWeight: FontWeight.w500)),
                     ]),
                   ],
                 ],
@@ -136,27 +153,28 @@ class IssueCard extends StatelessWidget {
     );
   }
 
-  String _shortDate(DateTime dt) =>
-      '${dt.day}/${dt.month}/${dt.year}';
+  String _shortDate(DateTime dt) {
+    return DateFormat('d MMM yyyy').format(dt);
+  }
 }
 
 class _Badge extends StatelessWidget {
   final String label;
   final Color color;
-  const _Badge({required this.label, required this.color});
+  final Color bgColor;
+  const _Badge({required this.label, required this.color, required this.bgColor});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.15),
+        color: bgColor,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withValues(alpha: 0.4)),
       ),
       child: Text(label,
           style: TextStyle(
-              color: color, fontSize: 10, fontWeight: FontWeight.w600)),
+              color: color, fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 0.5)),
     );
   }
 }
