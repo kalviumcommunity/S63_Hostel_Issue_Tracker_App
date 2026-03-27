@@ -5,8 +5,9 @@ import '../../providers/issue_provider.dart';
 import 'student_dashboard.dart';
 import 'admin_dashboard.dart';
 
-/// HomeScreen checks the user's role and shows either the
-/// StudentDashboard or the AdminDashboard.
+/// HomeScreen checks the user's role and starts the correct
+/// Firestore listener. It re-initializes if the userId changes
+/// (e.g. a different user logs in without restarting the app).
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -15,22 +16,24 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  bool _initialized = false;
+  String? _currentUserId; // tracks which user's listener is active
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (!_initialized) {
-      _initialized = true;
-      final auth = context.read<AuthProvider>();
-      final issueProvider = context.read<IssueProvider>();
+
+    final auth = context.read<AuthProvider>();
+    final issueProvider = context.read<IssueProvider>();
+    final newUserId = auth.userModel?.uid;
+
+    // Only start a new listener if the user has actually changed
+    if (newUserId != null && newUserId != _currentUserId) {
+      _currentUserId = newUserId;
 
       if (auth.userModel?.role == 'admin') {
-        // Admin sees all issues in real time
-        issueProvider.listenToAllIssues();
+        issueProvider.listenToAllIssues(); // admin sees everyone's issues
       } else {
-        // Student sees only their own issues
-        issueProvider.listenToMyIssues(auth.userModel?.uid ?? '');
+        issueProvider.listenToMyIssues(newUserId); // student sees only theirs
       }
     }
   }
