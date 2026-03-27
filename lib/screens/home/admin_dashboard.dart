@@ -5,6 +5,7 @@ import '../../providers/auth_provider.dart';
 import '../../providers/issue_provider.dart';
 import '../../widgets/issue_card.dart';
 import '../profile/profile_screen.dart';
+import 'admin_analytics_tab.dart';
 
 class AdminDashboard extends StatefulWidget {
   const AdminDashboard({super.key});
@@ -24,6 +25,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
         index: _currentIndex,
         children: const [
           _AdminAllIssuesTab(),
+          AdminAnalyticsTab(),
           ProfileScreen(),
         ],
       ),
@@ -38,6 +40,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
             icon: Icon(Icons.dashboard_outlined),
             selectedIcon: Icon(Icons.dashboard_rounded, color: Color(0xFF6C63FF)),
             label: 'All Issues',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.analytics_outlined),
+            selectedIcon: Icon(Icons.analytics_rounded, color: Color(0xFF6C63FF)),
+            label: 'Analytics',
           ),
           NavigationDestination(
             icon: Icon(Icons.person_outline),
