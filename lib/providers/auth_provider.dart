@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import '../models/user_model.dart';
+import '../services/notification_service.dart';
 
 class AuthProvider extends ChangeNotifier {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -26,6 +27,7 @@ class AuthProvider extends ChangeNotifier {
     _firebaseUser = user;
     if (user != null) {
       await _fetchUserData(user.uid);
+      await NotificationService().updateFCMToken();
     } else {
       _userModel = null;
     }
@@ -110,6 +112,7 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<void> logout() async {
+    await NotificationService().deleteToken();
     await _auth.signOut();
     _userModel = null;
     notifyListeners();

@@ -35,13 +35,6 @@ class _CreateIssueScreenState extends State<CreateIssueScreen> {
     'Other'
   ];
 
-  String _selectedPriority = SLAService.priorityMedium;
-  final List<String> _priorities = [
-    SLAService.priorityHigh,
-    SLAService.priorityMedium,
-    SLAService.priorityLow,
-  ];
-
   @override
   void dispose() {
     _titleController.dispose();
@@ -76,7 +69,8 @@ class _CreateIssueScreenState extends State<CreateIssueScreen> {
     }
 
     final createdAt = DateTime.now();
-    final deadline = SLAService.calculateDeadline(createdAt, _selectedPriority);
+    final autoPriority = SLAService.getPriorityForCategory(_selectedCategory);
+    final deadline = SLAService.calculateDeadline(createdAt, autoPriority);
 
     final newIssue = IssueModel(
       id: '',
@@ -90,7 +84,7 @@ class _CreateIssueScreenState extends State<CreateIssueScreen> {
       createdByName: user.name,
       createdAt: createdAt,
       updatedAt: createdAt,
-      priority: _selectedPriority,
+      priority: autoPriority,
       deadline: deadline,
       isDelayed: false,
     );
@@ -158,57 +152,6 @@ class _CreateIssueScreenState extends State<CreateIssueScreen> {
     );
   }
 
-  Widget _buildPriorityChips() {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      physics: const BouncingScrollPhysics(),
-      clipBehavior: Clip.none,
-      child: Row(
-        children: _priorities.map((priority) {
-          final isSelected = _selectedPriority == priority;
-          Color pColor;
-          if (priority == SLAService.priorityHigh) pColor = const Color(0xFFEF4444);
-          else if (priority == SLAService.priorityMedium) pColor = const Color(0xFFF59E0B);
-          else pColor = const Color(0xFF10B981);
-          
-          return GestureDetector(
-            onTap: () => setState(() => _selectedPriority = priority),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              margin: const EdgeInsets.only(right: 12),
-              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-              decoration: BoxDecoration(
-                color: isSelected ? pColor : Colors.white,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: isSelected ? pColor : const Color(0xFFE5E7EB),
-                  width: 1.5,
-                ),
-                boxShadow: isSelected
-                    ? [
-                        BoxShadow(
-                          color: pColor.withValues(alpha: 0.3),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
-                        )
-                      ]
-                    : [],
-              ),
-              child: Text(
-                priority,
-                style: TextStyle(
-                  color: isSelected ? Colors.white : const Color(0xFF6B7280),
-                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
-                  fontSize: 14,
-                ),
-              ),
-            ),
-          );
-        }).toList(),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -261,15 +204,6 @@ class _CreateIssueScreenState extends State<CreateIssueScreen> {
                     _buildCategoryChips(),
                     const SizedBox(height: 28),
 
-                    // --- Priority Section ---
-                    const Text('Priority (SLA)',
-                        style: TextStyle(
-                            color: Color(0xFF111827),
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700)),
-                    const SizedBox(height: 12),
-                    _buildPriorityChips(),
-                    const SizedBox(height: 28),
 
                     // --- Description Section ---
                     const Text('Description',

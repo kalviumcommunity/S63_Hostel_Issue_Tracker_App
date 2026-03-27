@@ -3,6 +3,26 @@ class SLAService {
   static const String priorityMedium = 'Medium';
   static const String priorityLow = 'Low';
 
+  /// Maps a specific category to its system-required priority level.
+  static String getPriorityForCategory(String category) {
+    switch (category) {
+      case 'Water Problem':
+      case 'Electricity':
+      case 'Security':
+        return priorityHigh; // 24h critical deadline
+        
+      case 'Mess Food':
+      case 'Cleanliness':
+      case 'Room Maintenance':
+        return priorityMedium; // 48h standard deadline
+        
+      case 'Internet / WiFi':
+      case 'Other':
+      default:
+        return priorityLow; // 72h low severity deadline
+    }
+  }
+
   /// Calculates the deadline based on priority.
   static DateTime calculateDeadline(DateTime createdAt, String priority) {
     switch (priority) {

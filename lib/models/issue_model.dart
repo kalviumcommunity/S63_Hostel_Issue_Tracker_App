@@ -1,5 +1,6 @@
 // Issue status values
 const String statusPending = 'pending';
+const String statusAssigned = 'assigned';
 const String statusInProgress = 'in_progress';
 const String statusResolved = 'resolved';
 
@@ -34,6 +35,11 @@ class IssueModel {
   final DateTime deadline;
   final bool isDelayed;
 
+  // Timeline Timestamps
+  final DateTime? assignedAt;
+  final DateTime? startedAt;
+  final DateTime? resolvedAt;
+
   IssueModel({
     required this.id,
     required this.title,
@@ -50,6 +56,9 @@ class IssueModel {
     required this.priority,
     required this.deadline,
     required this.isDelayed,
+    this.assignedAt,
+    this.startedAt,
+    this.resolvedAt,
   });
 
   factory IssueModel.fromMap(Map<String, dynamic> map, String docId) {
@@ -73,6 +82,9 @@ class IssueModel {
           ? DateTime.parse(map['deadline'])
           : DateTime.now().add(const Duration(hours: 72)),
       isDelayed: map['isDelayed'] ?? false,
+      assignedAt: map['assignedAt'] != null ? DateTime.parse(map['assignedAt']) : null,
+      startedAt: map['startedAt'] != null ? DateTime.parse(map['startedAt']) : null,
+      resolvedAt: map['resolvedAt'] != null ? DateTime.parse(map['resolvedAt']) : null,
     );
   }
 
@@ -92,6 +104,9 @@ class IssueModel {
       'priority': priority,
       'deadline': deadline.toIso8601String(),
       'isDelayed': isDelayed,
+      'assignedAt': assignedAt?.toIso8601String(),
+      'startedAt': startedAt?.toIso8601String(),
+      'resolvedAt': resolvedAt?.toIso8601String(),
     };
   }
 
@@ -100,6 +115,9 @@ class IssueModel {
     String? adminComment,
     DateTime? updatedAt,
     bool? isDelayed,
+    DateTime? assignedAt,
+    DateTime? startedAt,
+    DateTime? resolvedAt,
   }) {
     return IssueModel(
       id: id,
@@ -117,6 +135,9 @@ class IssueModel {
       priority: priority,
       deadline: deadline,
       isDelayed: isDelayed ?? this.isDelayed,
+      assignedAt: assignedAt ?? this.assignedAt,
+      startedAt: startedAt ?? this.startedAt,
+      resolvedAt: resolvedAt ?? this.resolvedAt,
     );
   }
 }

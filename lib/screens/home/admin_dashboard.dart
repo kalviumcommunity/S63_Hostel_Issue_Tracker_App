@@ -77,6 +77,8 @@ class _AdminAllIssuesTabState extends State<_AdminAllIssuesTab> {
       filteredIssues = issueProvider.issues;
     } else if (_filter == 'Pending') {
       filteredIssues = issueProvider.pendingIssues;
+    } else if (_filter == 'Assigned') {
+      filteredIssues = issueProvider.assignedIssues;
     } else if (_filter == 'In Progress') {
       filteredIssues = issueProvider.inProgressIssues;
     } else if (_filter == 'Resolved') {
@@ -183,25 +185,32 @@ class _AdminAllIssuesTabState extends State<_AdminAllIssuesTab> {
                           ),
                         ],
                       ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFEF4444).withValues(alpha: 0.1),
+                      Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: () => setState(() => _filter = 'Pending'),
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: const Color(0xFFEF4444).withValues(alpha: 0.3)),
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.campaign_rounded, size: 16, color: Color(0xFFEF4444)),
-                            const SizedBox(width: 6),
-                            Text(
-                              '${issueProvider.pendingIssues.length} New',
-                              style: const TextStyle(
-                                  color: Color(0xFFEF4444),
-                                  fontWeight: FontWeight.w800,
-                                  fontSize: 14),
+                          child: Ink(
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFEF4444).withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: const Color(0xFFEF4444).withValues(alpha: 0.3)),
                             ),
-                          ],
+                            child: Row(
+                              children: [
+                                const Icon(Icons.campaign_rounded, size: 16, color: Color(0xFFEF4444)),
+                                const SizedBox(width: 6),
+                                Text(
+                                  '${issueProvider.pendingIssues.length} New',
+                                  style: const TextStyle(
+                                      color: Color(0xFFEF4444),
+                                      fontWeight: FontWeight.w800,
+                                      fontSize: 14),
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
                       )
                     ],
@@ -224,6 +233,11 @@ class _AdminAllIssuesTabState extends State<_AdminAllIssuesTab> {
                             count: issueProvider.pendingIssues.length,
                             isSelected: _filter == 'Pending',
                             onTap: () => setState(() => _filter = 'Pending')),
+                        _FilterChip(
+                            label: 'Assigned',
+                            count: issueProvider.assignedIssues.length,
+                            isSelected: _filter == 'Assigned',
+                            onTap: () => setState(() => _filter = 'Assigned')),
                         _FilterChip(
                             label: 'In Progress',
                             count: issueProvider.inProgressIssues.length,

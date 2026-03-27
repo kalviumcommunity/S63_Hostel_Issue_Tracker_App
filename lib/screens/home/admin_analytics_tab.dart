@@ -117,7 +117,17 @@ class AdminAnalyticsTab extends StatelessWidget {
                                 title: '${data.pendingIssues}',
                                 radius: 40,
                                 titleStyle: const TextStyle(
-                                    fontSize: 16,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white),
+                              ),
+                              PieChartSectionData(
+                                color: const Color(0xFF6C63FF),
+                                value: data.assignedIssues.toDouble(),
+                                title: '${data.assignedIssues}',
+                                radius: 45,
+                                titleStyle: const TextStyle(
+                                    fontSize: 14,
                                     fontWeight: FontWeight.bold,
                                     color: Colors.white),
                               ),
@@ -125,9 +135,9 @@ class AdminAnalyticsTab extends StatelessWidget {
                                 color: const Color(0xFFF59E0B),
                                 value: data.inProgressIssues.toDouble(),
                                 title: '${data.inProgressIssues}',
-                                radius: 45,
+                                radius: 50,
                                 titleStyle: const TextStyle(
-                                    fontSize: 16,
+                                    fontSize: 14,
                                     fontWeight: FontWeight.bold,
                                     color: Colors.white),
                               ),
@@ -135,9 +145,9 @@ class AdminAnalyticsTab extends StatelessWidget {
                                 color: const Color(0xFF10B981),
                                 value: data.resolvedIssues.toDouble(),
                                 title: '${data.resolvedIssues}',
-                                radius: 50,
+                                radius: 55,
                                 titleStyle: const TextStyle(
-                                    fontSize: 16,
+                                    fontSize: 14,
                                     fontWeight: FontWeight.bold,
                                     color: Colors.white),
                               ),
@@ -150,6 +160,7 @@ class AdminAnalyticsTab extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
                       _Indicator(color: const Color(0xFFEF4444), text: 'Pending'),
+                      _Indicator(color: const Color(0xFF6C63FF), text: 'Assigned'),
                       _Indicator(color: const Color(0xFFF59E0B), text: 'In Progress'),
                       _Indicator(color: const Color(0xFF10B981), text: 'Resolved'),
                     ],
