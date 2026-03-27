@@ -64,12 +64,13 @@ class IssueProvider extends ChangeNotifier {
     _subscription = _firestore
         .collection('issues')
         .where('createdBy', isEqualTo: userId)
-        .orderBy('createdAt', descending: true)
         .snapshots()
         .listen((snapshot) {
       _issues = snapshot.docs
           .map((doc) => IssueModel.fromMap(doc.data(), doc.id))
           .toList();
+      // Sort locally to avoid Firestore composite index requirement
+      _issues.sort((a, b) => b.createdAt.compareTo(a.createdAt));
       notifyListeners();
     }, onError: (e) {
       _error = e.toString();
