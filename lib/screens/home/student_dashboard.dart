@@ -70,6 +70,13 @@ class _StudentDashboardState extends State<StudentDashboard> {
 class _HomeTab extends StatelessWidget {
   const _HomeTab();
 
+  String _getGreeting() {
+    final hour = DateTime.now().hour;
+    if (hour < 12) return 'Good Morning,';
+    if (hour < 17) return 'Good Afternoon,';
+    return 'Good Evening,';
+  }
+
   @override
   Widget build(BuildContext context) {
     final user = context.watch<AuthProvider>().userModel;
@@ -97,9 +104,9 @@ class _HomeTab extends StatelessWidget {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'Good Morning,',
-                        style: TextStyle(color: Color(0xFF6B7280), fontSize: 14),
+                      Text(
+                        _getGreeting(),
+                        style: const TextStyle(color: Color(0xFF6B7280), fontSize: 14),
                       ),
                       const SizedBox(height: 2),
                       Text(
