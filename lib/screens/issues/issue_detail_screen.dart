@@ -5,6 +5,8 @@ import 'package:intl/intl.dart';
 import '../../models/issue_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/issue_provider.dart';
+import '../../services/sla_service.dart';
+import '../../widgets/countdown_timer.dart';
 
 class IssueDetailScreen extends StatefulWidget {
   final String issueId;
@@ -155,6 +157,61 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
                   ),
                 ],
               ),
+            ),
+            const SizedBox(height: 24),
+
+            // SLA Countdown and Priority
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                SLACountdownTimer(issue: issue),
+                
+                // Detailed Priority Badge
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: issue.priority == SLAService.priorityHigh 
+                        ? const Color(0xFFFEF2F2)
+                        : issue.priority == SLAService.priorityMedium 
+                            ? const Color(0xFFFFFBEB)
+                            : const Color(0xFFF0FDF4),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: issue.priority == SLAService.priorityHigh 
+                        ? const Color(0xFFEF4444).withValues(alpha: 0.3)
+                        : issue.priority == SLAService.priorityMedium 
+                            ? const Color(0xFFF59E0B).withValues(alpha: 0.3)
+                            : const Color(0xFF10B981).withValues(alpha: 0.3),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.flag_rounded,
+                        size: 16,
+                        color: issue.priority == SLAService.priorityHigh 
+                        ? const Color(0xFFEF4444)
+                        : issue.priority == SLAService.priorityMedium 
+                            ? const Color(0xFFF59E0B)
+                            : const Color(0xFF10B981),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        '${issue.priority} Priority',
+                        style: TextStyle(
+                          color: issue.priority == SLAService.priorityHigh 
+                          ? const Color(0xFFEF4444)
+                          : issue.priority == SLAService.priorityMedium 
+                              ? const Color(0xFFF59E0B)
+                              : const Color(0xFF10B981),
+                          fontSize: 13,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      )
+                    ],
+                  ),
+                )
+              ],
             ),
             const SizedBox(height: 24),
 
