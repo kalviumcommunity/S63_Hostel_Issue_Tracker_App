@@ -329,6 +329,21 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
                 ),
               ],
             ),
+            const SizedBox(height: 32),
+
+            // Chat Button (Prominent)
+            ElevatedButton.icon(
+              onPressed: () => context.push('/issue/${issue.id}/chat'),
+              icon: const Icon(Icons.forum_rounded),
+              label: const Text('Open Issue Chat'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF111827), // Dark accent for contrast
+                foregroundColor: Colors.white,
+                elevation: 4,
+                shadowColor: const Color(0xFF111827).withValues(alpha: 0.3),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              ),
+            ),
 
             // Admin Comment Display (if exists)
             if (issue.adminComment != null &&
