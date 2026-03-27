@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
@@ -11,6 +12,7 @@ class IssueProvider extends ChangeNotifier {
   List<IssueModel> _issues = [];
   bool _isLoading = false;
   String? _error;
+  StreamSubscription? _subscription; // tracks active Firestore listener
 
   List<IssueModel> get issues => _issues;
   bool get isLoading => _isLoading;
@@ -24,16 +26,27 @@ class IssueProvider extends ChangeNotifier {
   List<IssueModel> get resolvedIssues =>
       _issues.where((i) => i.status == statusResolved).toList();
 
-  // Real-time listener
+  // Cancel old listener and clear issues (called on logout or user switch)
+  void clearIssues() {
+    _subscription?.cancel();
+    _subscription = null;
+    _issues = [];
+    notifyListeners();
+  }
+
+  // Real-time listener for admin — sees ALL issues
   void listenToAllIssues() {
-    _firestore
+    _subscription?.cancel(); // cancel previous listener first
+    _issues = [];            // clear old user's data immediately
+    notifyListeners();
+
+    _subscription = _firestore
         .collection('issues')
         .orderBy('createdAt', descending: true)
         .snapshots()
         .listen((snapshot) {
       _issues = snapshot.docs
-          .map((doc) =>
-              IssueModel.fromMap(doc.data(), doc.id))
+          .map((doc) => IssueModel.fromMap(doc.data(), doc.id))
           .toList();
       notifyListeners();
     }, onError: (e) {
@@ -42,17 +55,20 @@ class IssueProvider extends ChangeNotifier {
     });
   }
 
-  // Real-time listener for a specific student
+  // Real-time listener for a specific student — sees only THEIR issues
   void listenToMyIssues(String userId) {
-    _firestore
+    _subscription?.cancel(); // cancel previous listener first
+    _issues = [];            // clear old user's data immediately
+    notifyListeners();
+
+    _subscription = _firestore
         .collection('issues')
         .where('createdBy', isEqualTo: userId)
         .orderBy('createdAt', descending: true)
         .snapshots()
         .listen((snapshot) {
       _issues = snapshot.docs
-          .map((doc) =>
-              IssueModel.fromMap(doc.data(), doc.id))
+          .map((doc) => IssueModel.fromMap(doc.data(), doc.id))
           .toList();
       notifyListeners();
     }, onError: (e) {

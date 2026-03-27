@@ -149,6 +149,8 @@ class ProfileScreen extends StatelessWidget {
             // Sign out
             OutlinedButton.icon(
               onPressed: () async {
+                // Clear old issues & cancel listener BEFORE logging out
+                context.read<IssueProvider>().clearIssues();
                 await auth.logout();
                 if (context.mounted) context.go('/login');
               },
