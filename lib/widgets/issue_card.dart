@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../models/issue_model.dart';
 import 'package:intl/intl.dart';
+import '../services/sla_service.dart';
+import 'countdown_timer.dart';
 
 class IssueCard extends StatelessWidget {
   final IssueModel issue;
@@ -48,18 +50,25 @@ class IssueCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    bool isDelayed = SLAService.isDelayed(issue.deadline, issue.status);
+
     return GestureDetector(
       onTap: () => context.push('/issue/${issue.id}'),
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: isDelayed ? const Color(0xFFFEF2F2) : Colors.white, // Red tint if delayed
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: const Color(0xFFF3F4F6)),
+          border: Border.all(
+            color: isDelayed ? const Color(0xFFEF4444).withValues(alpha: 0.5) : const Color(0xFFF3F4F6),
+            width: isDelayed ? 1.5 : 1.0,
+          ),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFF111827).withValues(alpha: 0.03),
+              color: isDelayed 
+                  ? const Color(0xFFEF4444).withValues(alpha: 0.1) 
+                  : const Color(0xFF111827).withValues(alpha: 0.03),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -115,33 +124,45 @@ class IssueCard extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 10),
+          
+                  // Location and Date
                   Row(children: [
-                    const Icon(Icons.location_on_rounded,
-                        size: 14, color: Color(0xFF9CA3AF)),
+                    const Icon(Icons.location_on_rounded, size: 14, color: Color(0xFF9CA3AF)),
                     const SizedBox(width: 4),
-                    Text(issue.location,
-                        style: const TextStyle(
-                            color: Color(0xFF9CA3AF), fontSize: 12, fontWeight: FontWeight.w500)),
-                    const Spacer(),
-                    const Icon(Icons.access_time_rounded,
-                        size: 14, color: Color(0xFF9CA3AF)),
+                    Expanded(
+                      child: Text(
+                        issue.location,
+                        style: const TextStyle(color: Color(0xFF9CA3AF), fontSize: 12, fontWeight: FontWeight.w500),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const Icon(Icons.access_time_rounded, size: 14, color: Color(0xFF9CA3AF)),
                     const SizedBox(width: 4),
                     Text(
                       _shortDate(issue.createdAt),
-                      style: const TextStyle(
-                          color: Color(0xFF9CA3AF), fontSize: 12, fontWeight: FontWeight.w500),
+                      style: const TextStyle(color: Color(0xFF9CA3AF), fontSize: 12, fontWeight: FontWeight.w500),
                     ),
                   ]),
+                  
+                  const SizedBox(height: 8),
+                  
+                  // SLA Timer and Priority Row
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      SLACountdownTimer(issue: issue, compact: true),
+                      _PriorityBadge(priority: issue.priority),
+                    ],
+                  ),
+                  
                   // Admin: show reporter name
                   if (isAdmin) ...[
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 8),
                     Row(children: [
-                      const Icon(Icons.person_rounded,
-                          size: 14, color: Color(0xFF9CA3AF)),
+                      const Icon(Icons.person_rounded, size: 14, color: Color(0xFF9CA3AF)),
                       const SizedBox(width: 4),
                       Text(issue.createdByName,
-                          style: const TextStyle(
-                              color: Color(0xFF9CA3AF), fontSize: 12, fontWeight: FontWeight.w500)),
+                          style: const TextStyle(color: Color(0xFF9CA3AF), fontSize: 12, fontWeight: FontWeight.w500)),
                     ]),
                   ],
                 ],
@@ -174,7 +195,42 @@ class _Badge extends StatelessWidget {
       ),
       child: Text(label,
           style: TextStyle(
-              color: color, fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 0.5)),
+              color: color, fontSize: 11, fontWeight: FontWeight.w800, letterSpacing: 0.5)),
     );
   }
 }
+
+class _PriorityBadge extends StatelessWidget {
+  final String priority;
+
+  const _PriorityBadge({required this.priority});
+
+  @override
+  Widget build(BuildContext context) {
+    Color pColor;
+    if (priority == SLAService.priorityHigh) {
+      pColor = const Color(0xFFEF4444);
+    } else if (priority == SLAService.priorityMedium) {
+      pColor = const Color(0xFFF59E0B);
+    } else {
+      pColor = const Color(0xFF10B981);
+    }
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(Icons.flag_rounded, color: pColor, size: 14),
+        const SizedBox(width: 4),
+        Text(
+          priority,
+          style: TextStyle(
+            color: pColor,
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ],
+    );
+  }
+}
+

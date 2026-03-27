@@ -29,6 +29,11 @@ class IssueModel {
   final DateTime? updatedAt;
   final String? adminComment;
 
+  // Added SLA specific fields
+  final String priority; // High | Medium | Low
+  final DateTime deadline;
+  final bool isDelayed;
+
   IssueModel({
     required this.id,
     required this.title,
@@ -42,6 +47,9 @@ class IssueModel {
     required this.createdAt,
     this.updatedAt,
     this.adminComment,
+    required this.priority,
+    required this.deadline,
+    required this.isDelayed,
   });
 
   factory IssueModel.fromMap(Map<String, dynamic> map, String docId) {
@@ -60,6 +68,11 @@ class IssueModel {
       updatedAt:
           map['updatedAt'] != null ? DateTime.parse(map['updatedAt']) : null,
       adminComment: map['adminComment'],
+      priority: map['priority'] ?? 'Low',
+      deadline: map['deadline'] != null
+          ? DateTime.parse(map['deadline'])
+          : DateTime.now().add(const Duration(hours: 72)),
+      isDelayed: map['isDelayed'] ?? false,
     );
   }
 
@@ -76,6 +89,9 @@ class IssueModel {
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt?.toIso8601String(),
       'adminComment': adminComment,
+      'priority': priority,
+      'deadline': deadline.toIso8601String(),
+      'isDelayed': isDelayed,
     };
   }
 
@@ -83,6 +99,7 @@ class IssueModel {
     String? status,
     String? adminComment,
     DateTime? updatedAt,
+    bool? isDelayed,
   }) {
     return IssueModel(
       id: id,
@@ -97,6 +114,9 @@ class IssueModel {
       createdAt: createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       adminComment: adminComment ?? this.adminComment,
+      priority: priority,
+      deadline: deadline,
+      isDelayed: isDelayed ?? this.isDelayed,
     );
   }
 }
