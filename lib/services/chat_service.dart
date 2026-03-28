@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import '../models/message_model.dart';
 
 class ChatService {
@@ -39,20 +40,24 @@ class ChatService {
         timestamp: DateTime.now(),
       );
 
-      await _firestore
+      // FIRE AND FORGET: Add the message but don't wait for server confirmation to continue
+      // Firestore will handle this optimistically in the local cache/stream
+      _firestore
           .collection('issues')
           .doc(issueId)
           .collection('messages')
           .add(newMessage.toMap());
 
-      // Optionally update the issue's updatedAt timestamp
-      await _firestore.collection('issues').doc(issueId).update({
+      // BACKGROUND UPDATE: Refresh parent issue timestamp without blocking the UI
+      _firestore.collection('issues').doc(issueId).update({
         'updatedAt': DateTime.now().toIso8601String(),
-      });
+      }).catchError((e) => debugPrint('Secondary update failed: $e'));
 
-      return true;
+      return true; // We return true immediately as Firestore has cached the write locally
     } catch (e) {
+      debugPrint('Chat error: $e');
       return false;
     }
   }
 }
+

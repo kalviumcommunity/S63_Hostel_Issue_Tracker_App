@@ -4,6 +4,7 @@ import '../../providers/auth_provider.dart';
 import '../../providers/issue_provider.dart';
 import 'student_dashboard.dart';
 import 'admin_dashboard.dart';
+import 'staff_dashboard.dart';
 
 /// HomeScreen checks the user's role and starts the correct
 /// Firestore listener. It re-initializes if the userId changes
@@ -32,6 +33,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
       if (auth.userModel?.role == 'admin') {
         issueProvider.listenToAllIssues(); // admin sees everyone's issues
+      } else if (auth.userModel?.role == 'staff') {
+        issueProvider.listenToMyAssignedIssues(newUserId); // staff sees issues assigned to them
       } else {
         issueProvider.listenToMyIssues(newUserId); // student sees only theirs
       }
@@ -41,7 +44,26 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
-    final isAdmin = auth.userModel?.role == 'admin';
-    return isAdmin ? const AdminDashboard() : const StudentDashboard();
+    
+    // 🔥 NEW: Show loading if user is authenticated but profile isn't loaded yet
+    if (auth.isLoggedIn && auth.userModel == null) {
+      return const Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 16),
+              Text('Syncing your profile...', style: TextStyle(color: Color(0xFF6B7280))),
+            ],
+          ),
+        ),
+      );
+    }
+
+    final role = auth.userModel?.role;
+    if (role == 'admin') return const AdminDashboard();
+    if (role == 'staff') return const StaffDashboard();
+    return const StudentDashboard();
   }
 }
