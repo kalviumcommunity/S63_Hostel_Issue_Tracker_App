@@ -34,6 +34,10 @@ class IssueModel {
   final String priority; // High | Medium | Low
   final DateTime deadline;
   final bool isDelayed;
+  
+  // Assignment Fields
+  final String? assignedStaffId;
+  final String? assignedStaffName;
 
   // Timeline Timestamps
   final DateTime? assignedAt;
@@ -56,6 +60,8 @@ class IssueModel {
     required this.priority,
     required this.deadline,
     required this.isDelayed,
+    this.assignedStaffId,
+    this.assignedStaffName,
     this.assignedAt,
     this.startedAt,
     this.resolvedAt,
@@ -82,6 +88,8 @@ class IssueModel {
           ? DateTime.parse(map['deadline'])
           : DateTime.now().add(const Duration(hours: 72)),
       isDelayed: map['isDelayed'] ?? false,
+      assignedStaffId: map['assignedStaffId'],
+      assignedStaffName: map['assignedStaffName'],
       assignedAt: map['assignedAt'] != null ? DateTime.parse(map['assignedAt']) : null,
       startedAt: map['startedAt'] != null ? DateTime.parse(map['startedAt']) : null,
       resolvedAt: map['resolvedAt'] != null ? DateTime.parse(map['resolvedAt']) : null,
@@ -104,6 +112,8 @@ class IssueModel {
       'priority': priority,
       'deadline': deadline.toIso8601String(),
       'isDelayed': isDelayed,
+      'assignedStaffId': assignedStaffId,
+      'assignedStaffName': assignedStaffName,
       'assignedAt': assignedAt?.toIso8601String(),
       'startedAt': startedAt?.toIso8601String(),
       'resolvedAt': resolvedAt?.toIso8601String(),
@@ -115,6 +125,8 @@ class IssueModel {
     String? adminComment,
     DateTime? updatedAt,
     bool? isDelayed,
+    String? assignedStaffId,
+    String? assignedStaffName,
     DateTime? assignedAt,
     DateTime? startedAt,
     DateTime? resolvedAt,
@@ -135,6 +147,8 @@ class IssueModel {
       priority: priority,
       deadline: deadline,
       isDelayed: isDelayed ?? this.isDelayed,
+      assignedStaffId: assignedStaffId ?? this.assignedStaffId,
+      assignedStaffName: assignedStaffName ?? this.assignedStaffName,
       assignedAt: assignedAt ?? this.assignedAt,
       startedAt: startedAt ?? this.startedAt,
       resolvedAt: resolvedAt ?? this.resolvedAt,

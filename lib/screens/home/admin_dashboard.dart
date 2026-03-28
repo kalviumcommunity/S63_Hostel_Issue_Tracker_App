@@ -65,7 +65,32 @@ class _AdminAllIssuesTab extends StatefulWidget {
 }
 
 class _AdminAllIssuesTabState extends State<_AdminAllIssuesTab> {
-  String _filter = 'All'; // 'All', 'Pending', 'In Progress', 'Resolved'
+  String _filter = 'All'; 
+  final ScrollController _scrollController = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<IssueProvider>().fetchFirstPage();
+    });
+    _scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 200) {
+      if (_filter == 'All') {
+        context.read<IssueProvider>().fetchMoreIssues();
+      }
+    }
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -73,12 +98,12 @@ class _AdminAllIssuesTabState extends State<_AdminAllIssuesTab> {
     final issueProvider = context.watch<IssueProvider>();
 
     List<IssueModel> filteredIssues = [];
+    bool isPaginated = _filter == 'All';
+
     if (_filter == 'All') {
-      filteredIssues = issueProvider.issues;
+      filteredIssues = issueProvider.paginatedIssues;
     } else if (_filter == 'Pending') {
       filteredIssues = issueProvider.pendingIssues;
-    } else if (_filter == 'Assigned') {
-      filteredIssues = issueProvider.assignedIssues;
     } else if (_filter == 'In Progress') {
       filteredIssues = issueProvider.inProgressIssues;
     } else if (_filter == 'Resolved') {
@@ -93,11 +118,16 @@ class _AdminAllIssuesTabState extends State<_AdminAllIssuesTab> {
             color: const Color(0xFF6C63FF),
             backgroundColor: Colors.white,
             onRefresh: () async {
-              issueProvider.listenToAllIssues();
+              if (isPaginated) {
+                await issueProvider.fetchFirstPage();
+              } else {
+                issueProvider.listenToAllIssues();
+              }
             },
             child: SingleChildScrollView(
+              controller: _scrollController,
               padding: const EdgeInsets.only(left: 24, right: 24, top: 180, bottom: 20),
-              physics: const AlwaysScrollableScrollPhysics(),
+              physics: const ClampingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
               child: filteredIssues.isEmpty
                   ? Container(
                       width: double.infinity,
@@ -126,16 +156,33 @@ class _AdminAllIssuesTabState extends State<_AdminAllIssuesTab> {
                         ],
                       ),
                     )
-                  : ListView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: filteredIssues.length,
-                      itemBuilder: (context, index) {
-                        return IssueCard(
-                          issue: filteredIssues[index],
-                          isAdmin: true,
-                        );
-                      },
+                  : Column(
+                      children: [
+                        ListView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          itemCount: filteredIssues.length,
+                          itemBuilder: (context, index) {
+                            return IssueCard(
+                              issue: filteredIssues[index],
+                              isAdmin: true,
+                            );
+                          },
+                        ),
+                        if (isPaginated && issueProvider.isFetchingMore)
+                          const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 24),
+                            child: Center(child: CircularProgressIndicator()),
+                          ),
+                        if (isPaginated && !issueProvider.hasMore && filteredIssues.isNotEmpty)
+                          const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 24),
+                            child: Center(
+                              child: Text('You have reached the end', 
+                                style: TextStyle(color: Color(0xFF9CA3AF), fontSize: 13, fontStyle: FontStyle.italic)),
+                            ),
+                          ),
+                      ],
                     ),
             ),
           ),
@@ -188,7 +235,10 @@ class _AdminAllIssuesTabState extends State<_AdminAllIssuesTab> {
                       Material(
                         color: Colors.transparent,
                         child: InkWell(
-                          onTap: () => setState(() => _filter = 'Pending'),
+                        onTap: () {
+                          setState(() => _filter = 'Pending');
+                          issueProvider.markNotificationsRead();
+                        },
                           borderRadius: BorderRadius.circular(12),
                           child: Ink(
                             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
@@ -202,7 +252,7 @@ class _AdminAllIssuesTabState extends State<_AdminAllIssuesTab> {
                                 const Icon(Icons.campaign_rounded, size: 16, color: Color(0xFFEF4444)),
                                 const SizedBox(width: 6),
                                 Text(
-                                  '${issueProvider.pendingIssues.length} New',
+                                  '${issueProvider.newIssuesCount} New',
                                   style: const TextStyle(
                                       color: Color(0xFFEF4444),
                                       fontWeight: FontWeight.w800,
@@ -233,11 +283,6 @@ class _AdminAllIssuesTabState extends State<_AdminAllIssuesTab> {
                             count: issueProvider.pendingIssues.length,
                             isSelected: _filter == 'Pending',
                             onTap: () => setState(() => _filter = 'Pending')),
-                        _FilterChip(
-                            label: 'Assigned',
-                            count: issueProvider.assignedIssues.length,
-                            isSelected: _filter == 'Assigned',
-                            onTap: () => setState(() => _filter = 'Assigned')),
                         _FilterChip(
                             label: 'In Progress',
                             count: issueProvider.inProgressIssues.length,

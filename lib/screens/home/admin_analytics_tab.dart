@@ -14,8 +14,8 @@ class AdminAnalyticsTab extends StatelessWidget {
 
     return SafeArea(
       child: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        physics: const BouncingScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+        physics: const ClampingScrollPhysics(),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -35,45 +35,37 @@ class AdminAnalyticsTab extends StatelessWidget {
             ),
             const SizedBox(height: 32),
 
-            // Top Summary Cards
+            // Advanced Insight Metrics
             Row(
               children: [
                 Expanded(
-                  child: _MetricCard(
-                    title: 'Total Issues',
-                    value: data.totalIssues.toString(),
-                    icon: Icons.assignment_rounded,
-                    color: const Color(0xFF6C63FF),
-                    bgColor: const Color(0xFF6C63FF).withValues(alpha: 0.1),
+                  child: _InsightMiniCard(
+                    title: 'Growth (Weekly)',
+                    value: '${data.weeklyGrowthRate > 0 ? '+' : ''}${data.weeklyGrowthRate.toStringAsFixed(1)}%',
+                    icon: data.weeklyGrowthRate > 0 ? Icons.trending_up_rounded : Icons.trending_down_rounded,
+                    color: data.weeklyGrowthRate > 0 ? const Color(0xFFEF4444) : const Color(0xFF10B981),
                   ),
                 ),
                 const SizedBox(width: 16),
                 Expanded(
-                  child: _MetricCard(
-                    title: 'Avg Time',
-                    value: AnalyticsService.formatDuration(data.averageResolutionTime),
-                    icon: Icons.timer_rounded,
-                    color: const Color(0xFF3ECFCF),
-                    bgColor: const Color(0xFF3ECFCF).withValues(alpha: 0.1),
+                  child: _InsightMiniCard(
+                    title: 'Peak Activity',
+                    value: '${data.peakHourOfDay}:00 ${data.peakHourOfDay >= 12 ? 'PM' : 'AM'}',
+                    icon: Icons.access_time_filled_rounded,
+                    color: const Color(0xFF6C63FF),
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: _MetricCard(
-                    title: 'Top Category',
-                    value: data.mostCommonCategory,
-                    icon: Icons.stars_rounded,
-                    color: const Color(0xFFF59E0B),
-                    bgColor: const Color(0xFFFEF3C7),
-                  ),
-                ),
-              ],
+            _HighlightBanner(
+              title: 'Hottest Zone',
+              subtitle: '${data.mostProblematicBlock} has the most reports (${data.blockCounts[data.mostProblematicBlock]} active issues)',
+              icon: Icons.location_on_rounded,
+              color: const Color(0xFFF59E0B),
             ),
             const SizedBox(height: 32),
+
 
             // Status Breakdown Pie Chart
             const Text(
@@ -122,16 +114,6 @@ class AdminAnalyticsTab extends StatelessWidget {
                                     color: Colors.white),
                               ),
                               PieChartSectionData(
-                                color: const Color(0xFF6C63FF),
-                                value: data.assignedIssues.toDouble(),
-                                title: '${data.assignedIssues}',
-                                radius: 45,
-                                titleStyle: const TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white),
-                              ),
-                              PieChartSectionData(
                                 color: const Color(0xFFF59E0B),
                                 value: data.inProgressIssues.toDouble(),
                                 title: '${data.inProgressIssues}',
@@ -156,11 +138,10 @@ class AdminAnalyticsTab extends StatelessWidget {
                         ),
                   ),
                   const SizedBox(height: 24),
-                  Row(
+                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
                       _Indicator(color: const Color(0xFFEF4444), text: 'Pending'),
-                      _Indicator(color: const Color(0xFF6C63FF), text: 'Assigned'),
                       _Indicator(color: const Color(0xFFF59E0B), text: 'In Progress'),
                       _Indicator(color: const Color(0xFF10B981), text: 'Resolved'),
                     ],
@@ -170,9 +151,9 @@ class AdminAnalyticsTab extends StatelessWidget {
             ),
             const SizedBox(height: 32),
 
-            // Last 7 days Bar Chart
+            // Geographic Breakdown (Block Charts)
             const Text(
-              'Issues Trend (Last 7 Days)',
+              'Geographic Breakdown',
               style: TextStyle(
                 color: Color(0xFF111827),
                 fontSize: 20,
@@ -182,85 +163,105 @@ class AdminAnalyticsTab extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             Container(
-              padding: const EdgeInsets.only(top: 32, bottom: 16, left: 16, right: 24),
-              height: 240,
+              padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(24),
                 border: Border.all(color: const Color(0xFFF3F4F6)),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFF111827).withValues(alpha: 0.03),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  )
-                ],
               ),
-              child: BarChart(
-                BarChartData(
-                  alignment: BarChartAlignment.spaceAround,
-                  maxY: (data.last7DaysCounts.values.isEmpty ? 0 : data.last7DaysCounts.values.reduce((a, b) => a > b ? a : b)).toDouble() + 2,
-                  barTouchData: BarTouchData(enabled: false),
+              child: Column(
+                children: data.blockCounts.entries.map((entry) {
+                  final percent = entry.value / data.totalIssues;
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(entry.key, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+                            Text('${entry.value} Issues', style: const TextStyle(color: Color(0xFF6B7280), fontSize: 12)),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(4),
+                          child: LinearProgressIndicator(
+                            value: percent,
+                            backgroundColor: const Color(0xFFF3F4F6),
+                            color: const Color(0xFF6C63FF),
+                            minHeight: 8,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+            const SizedBox(height: 32),
+
+            // Peak Hours Trend (Line Chart)
+            const Text(
+              'Hourly Heatmap',
+              style: TextStyle(
+                color: Color(0xFF111827),
+                fontSize: 20,
+                fontWeight: FontWeight.w800,
+                letterSpacing: -0.5,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              height: 200,
+              padding: const EdgeInsets.only(top: 24, bottom: 8, left: 16, right: 24),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(color: const Color(0xFFF3F4F6)),
+              ),
+              child: LineChart(
+                LineChartData(
+                  gridData: const FlGridData(show: false),
                   titlesData: FlTitlesData(
                     show: true,
                     bottomTitles: AxisTitles(
                       sideTitles: SideTitles(
                         showTitles: true,
-                        getTitlesWidget: (double value, TitleMeta meta) {
-                          const style = TextStyle(
-                              color: Color(0xFF9CA3AF),
-                              fontWeight: FontWeight.bold,
-                              fontSize: 12);
-                          
-                          int index = value.toInt();
-                          if (index < 0 || index > 6) return const SizedBox();
-                          // calculate date string based on index (0 is 6 days ago, 6 is today)
-                          DateTime date = DateTime.now().subtract(Duration(days: 6 - index));
-                          return Padding(
-                            padding: const EdgeInsets.only(top: 8.0),
-                            child: Text('${date.day}/${date.month}', style: style),
-                          );
-                        },
+                        interval: 6,
+                        getTitlesWidget: (v, m) => Text('${v.toInt()}h', style: const TextStyle(fontSize: 10, color: Color(0xFF9CA3AF))),
                       ),
                     ),
-                    leftTitles: const AxisTitles(
-                      sideTitles: SideTitles(showTitles: false), // Hide left Y axis for clean look
-                    ),
-                    topTitles: const AxisTitles(
-                      sideTitles: SideTitles(showTitles: false),
-                    ),
-                    rightTitles: const AxisTitles(
-                      sideTitles: SideTitles(showTitles: false),
-                    ),
-                  ),
-                  gridData: FlGridData(
-                    show: true,
-                    drawVerticalLine: false,
-                    horizontalInterval: 1,
-                    getDrawingHorizontalLine: (value) => 
-                        FlLine(color: const Color(0xFFE5E7EB), strokeWidth: 1, dashArray: [4, 4]),
+                    leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                    topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                    rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
                   ),
                   borderData: FlBorderData(show: false),
-                  barGroups: List.generate(7, (i) {
-                    return BarChartGroupData(
-                      x: i,
-                      barRods: [
-                        BarChartRodData(
-                          toY: (data.last7DaysCounts[i] ?? 0).toDouble(),
-                          color: const Color(0xFF6C63FF),
-                          width: 16,
-                          borderRadius: const BorderRadius.only(
-                            topLeft: Radius.circular(6),
-                            topRight: Radius.circular(6),
-                          ),
-                        ),
-                      ],
-                    );
-                  }),
+                  lineBarsData: [
+                    LineChartBarData(
+                      spots: data.hourlyTrends.entries.map((e) => FlSpot(e.key.toDouble(), e.value.toDouble())).toList(),
+                      isCurved: true,
+                      color: const Color(0xFF6C63FF),
+                      barWidth: 3,
+                      isStrokeCapRound: true,
+                      dotData: const FlDotData(show: false),
+                      belowBarData: BarAreaData(
+                        show: true, 
+                        color: const Color(0xFF6C63FF).withValues(alpha: 0.1),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
-            const SizedBox(height: 32),
+            const SizedBox(height: 16),
+            const Center(
+              child: Text('Shows frequency of issues by hour of the day', 
+                style: TextStyle(color: Color(0xFF9CA3AF), fontSize: 11, fontStyle: FontStyle.italic)),
+            ),
+            const SizedBox(height: 40),
+
           ],
         ),
       ),
@@ -326,6 +327,90 @@ class _MetricCard extends StatelessWidget {
               color: Color(0xFF6B7280),
               fontSize: 13,
               fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _InsightMiniCard extends StatelessWidget {
+  final String title;
+  final String value;
+  final IconData icon;
+  final Color color;
+
+  const _InsightMiniCard({
+    required this.title,
+    required this.value,
+    required this.icon,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFF3F4F6), width: 1.5),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: color, size: 20),
+          const SizedBox(height: 12),
+          Text(value, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Color(0xFF111827))),
+          Text(title, style: const TextStyle(fontSize: 12, color: Color(0xFF6B7280), fontWeight: FontWeight.w600)),
+        ],
+      ),
+    );
+  }
+}
+
+class _HighlightBanner extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final Color color;
+
+  const _HighlightBanner({
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [color.withValues(alpha: 0.1), color.withValues(alpha: 0.05)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+            child: Icon(icon, color: Colors.white, size: 20),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: TextStyle(color: color, fontWeight: FontWeight.w900, fontSize: 13, letterSpacing: 0.5)),
+                Text(subtitle, style: const TextStyle(color: Color(0xFF4B5563), fontSize: 13, height: 1.4, fontWeight: FontWeight.w600)),
+              ],
             ),
           ),
         ],

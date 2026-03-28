@@ -13,6 +13,7 @@ class ProfileScreen extends StatelessWidget {
     final issueProvider = context.watch<IssueProvider>();
     final user = auth.userModel;
     final isAdmin = user?.role == 'admin';
+    final isStaff = user?.role == 'staff';
 
     return SafeArea(
       child: SingleChildScrollView(
@@ -79,20 +80,26 @@ class ProfileScreen extends StatelessWidget {
               decoration: BoxDecoration(
                 color: isAdmin
                     ? const Color(0xFFFEF2F2)
-                    : const Color(0xFFEEF2FF),
+                    : isStaff 
+                        ? const Color(0xFFF5F3FF) // Purple tint for staff
+                        : const Color(0xFFEEF2FF),
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(
                   color: isAdmin
                       ? const Color(0xFFFECACA)
-                      : const Color(0xFFC7D2FE),
+                      : isStaff 
+                          ? const Color(0xFFDDD6FE)
+                          : const Color(0xFFC7D2FE),
                 ),
               ),
               child: Text(
-                isAdmin ? '🛠️  ADMIN' : '🎓  STUDENT',
+                isAdmin ? '🛠️  ADMIN' : isStaff ? '💼  STAFF' : '🎓  STUDENT',
                 style: TextStyle(
                   color: isAdmin
                       ? const Color(0xFFDC2626)
-                      : const Color(0xFF4F46E5),
+                      : isStaff 
+                          ? const Color(0xFF7C3AED)
+                          : const Color(0xFF4F46E5),
                   fontSize: 12,
                   fontWeight: FontWeight.w800,
                   letterSpacing: 1.0,
@@ -117,7 +124,7 @@ class ProfileScreen extends StatelessWidget {
               ),
               child: Column(
                 children: [
-                  if (!isAdmin) ...[
+                  if (user?.role == 'student') ...[
                     _InfoRow(
                         icon: Icons.meeting_room_outlined,
                         label: 'Room Number',
@@ -127,6 +134,13 @@ class ProfileScreen extends StatelessWidget {
                         icon: Icons.business_outlined,
                         label: 'Hostel Block',
                         value: user?.hostelBlock ?? '-'),
+                    const Divider(color: Color(0xFFF3F4F6), height: 1),
+                  ],
+                  if (isStaff) ...[
+                    _InfoRow(
+                        icon: Icons.engineering_rounded,
+                        label: 'Specialization',
+                        value: user?.staffCategory ?? '-'),
                     const Divider(color: Color(0xFFF3F4F6), height: 1),
                   ],
                   _InfoRow(

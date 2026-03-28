@@ -33,28 +33,21 @@ class _IssueChatScreenState extends State<IssueChatScreen> {
     final text = _msgController.text.trim();
     if (text.isEmpty) return;
 
-    setState(() => _isSending = true);
-    
     // Clear input instantly for better UX
     _msgController.clear();
     
-    final success = await _chatService.sendMessage(
+    // Firestore performs optimistic updates and auto-retries locally.
+    // We send silently to keep the 'Popup-Free' experience clean.
+    _chatService.sendMessage(
       issueId: widget.issueId,
       text: text,
       senderId: currentUserId,
       senderName: currentUserName,
       isAdmin: isAdmin,
     );
-    
-    if (!success && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to send message'), backgroundColor: Color(0xFFEF4444)),
-      );
-      _msgController.text = text; // put it back on failure
-    }
-    
-    if (mounted) setState(() => _isSending = false);
   }
+
+
 
   @override
   Widget build(BuildContext context) {

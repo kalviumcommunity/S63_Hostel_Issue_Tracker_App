@@ -4,9 +4,10 @@ class UserModel {
   final String email;
   final String roomNumber;
   final String hostelBlock;
-  final String role; // 'student' or 'admin'
+  final String role; // 'student', 'admin', 'staff'
   final String? profileImageUrl;
   final String? fcmToken;
+  final String? staffCategory; // Only for staff
   final DateTime createdAt;
 
   UserModel({
@@ -18,6 +19,7 @@ class UserModel {
     required this.role,
     this.profileImageUrl,
     this.fcmToken,
+    this.staffCategory,
     required this.createdAt,
   });
 
@@ -31,6 +33,7 @@ class UserModel {
       role: map['role'] ?? 'student',
       profileImageUrl: map['profileImageUrl'],
       fcmToken: map['fcmToken'],
+      staffCategory: map['staffCategory'],
       createdAt: DateTime.parse(map['createdAt'] ?? DateTime.now().toIso8601String()),
     );
   }
@@ -45,6 +48,7 @@ class UserModel {
       'role': role,
       'profileImageUrl': profileImageUrl,
       'fcmToken': fcmToken,
+      'staffCategory': staffCategory,
       'createdAt': createdAt.toIso8601String(),
     };
   }

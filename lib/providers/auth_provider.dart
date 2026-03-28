@@ -39,10 +39,16 @@ class AuthProvider extends ChangeNotifier {
       final doc = await _firestore.collection('users').doc(uid).get();
       if (doc.exists) {
         _userModel = UserModel.fromMap(doc.data()!);
+        debugPrint('--- Profile Loaded for: ${_userModel?.name} (${_userModel?.role}) ---');
+      } else {
+        _error = 'User profile data missing in Firestore.';
+        debugPrint('--- Error: Firestore document $uid not found! ---');
       }
     } catch (e) {
-      _error = e.toString();
+      _error = 'Database connection failed: $e';
+      debugPrint('--- Firestore Fetch Error: $e ---');
     }
+    notifyListeners();
   }
 
   Future<bool> register({
@@ -52,6 +58,7 @@ class AuthProvider extends ChangeNotifier {
     required String roomNumber,
     required String hostelBlock,
     String role = 'student',
+    String? staffCategory,
   }) async {
     _isLoading = true;
     _error = null;
@@ -70,6 +77,7 @@ class AuthProvider extends ChangeNotifier {
         roomNumber: roomNumber,
         hostelBlock: hostelBlock,
         role: role,
+        staffCategory: staffCategory,
         createdAt: DateTime.now(),
       );
 
@@ -78,12 +86,30 @@ class AuthProvider extends ChangeNotifier {
           .doc(credential.user!.uid)
           .set(user.toMap());
 
+      // IF STAFF, ALSO SYNC TO STAFF COLLECTION FOR ASSIGNMENT
+      if (role == 'staff') {
+        await _firestore.collection('staff').doc(credential.user!.uid).set({
+          'name': name,
+          'role': 'Maintenance Specialist',
+          'category': staffCategory,
+          'isAvailable': true,
+          'activeIssuesCount': 0,
+        });
+      }
+
       _userModel = user;
       _isLoading = false;
       notifyListeners();
       return true;
     } on FirebaseAuthException catch (e) {
+      debugPrint('--- Registration [Auth] Error [${e.code}]: ${e.message} ---');
       _error = _getAuthErrorMessage(e.code);
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    } catch (e) {
+      debugPrint('--- Registration [Unexpected] Error: $e ---');
+      _error = 'Registration failed: ${e.toString()}';
       _isLoading = false;
       notifyListeners();
       return false;
@@ -104,7 +130,14 @@ class AuthProvider extends ChangeNotifier {
       notifyListeners();
       return true;
     } on FirebaseAuthException catch (e) {
+      debugPrint('--- Login Error [${e.code}]: ${e.message} ---');
       _error = _getAuthErrorMessage(e.code);
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    } catch (e) {
+      debugPrint('--- Unexpected Login Error: $e ---');
+      _error = 'Login failed: ${e.toString()}';
       _isLoading = false;
       notifyListeners();
       return false;
@@ -121,7 +154,8 @@ class AuthProvider extends ChangeNotifier {
   String _getAuthErrorMessage(String code) {
     switch (code) {
       case 'user-not-found':
-        return 'No user found with this email.';
+      case 'invalid-credential':
+        return 'No user found or incorrect password.';
       case 'wrong-password':
         return 'Incorrect password.';
       case 'email-already-in-use':
@@ -130,8 +164,14 @@ class AuthProvider extends ChangeNotifier {
         return 'Password must be at least 6 characters.';
       case 'invalid-email':
         return 'Please enter a valid email address.';
+      case 'user-disabled':
+        return 'This account has been disabled.';
+      case 'channel-error':
+        return 'Network error or empty fields.';
+      case 'network-request-failed':
+        return 'Check your internet connection.';
       default:
-        return 'An error occurred. Please try again.';
+        return 'Auth error ($code). Please try again.';
     }
   }
 }

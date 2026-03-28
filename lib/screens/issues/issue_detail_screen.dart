@@ -6,6 +6,8 @@ import '../../models/issue_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/issue_provider.dart';
 import '../../services/sla_service.dart';
+import '../../services/assignment_service.dart';
+import '../../models/staff_model.dart';
 import '../../widgets/countdown_timer.dart';
 import '../../widgets/issue_timeline.dart';
 
@@ -40,22 +42,76 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
     if (mounted) {
       setState(() => _isUpdating = false);
       if (success) {
-        if (context.canPop()) context.pop();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Status updated to $newStatus'),
-            backgroundColor: const Color(0xFF10B981), // Emerald green
+            content: Text('Updated successfully'),
+            backgroundColor: const Color(0xFF10B981),
           ),
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(issueProvider.error ?? 'Failed to update status'),
+            content: Text(issueProvider.error ?? 'Failed to update'),
             backgroundColor: const Color(0xFFEF4444),
           ),
         );
       }
     }
+  }
+
+  Future<void> _showReassignDialog(String issueId) async {
+    final staff = await AssignmentService.getAvailableStaff();
+    if (!mounted) return;
+
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        return Container(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Assign Staff Member',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+              ),
+              const SizedBox(height: 16),
+              Expanded(
+                child: ListView.builder(
+                  itemCount: staff.length,
+                  itemBuilder: (context, index) {
+                    final s = staff[index];
+                    return ListTile(
+                      leading: CircleAvatar(
+                        backgroundColor: const Color(0xFF6C63FF).withValues(alpha: 0.1),
+                        child: Text(s.name[0]),
+                      ),
+                      title: Text(s.name),
+                      subtitle: Text('${s.role} • ${s.activeIssuesCount} active issues'),
+                      trailing: const Icon(Icons.chevron_right_rounded),
+                      onTap: () async {
+                        Navigator.pop(context);
+                        setState(() => _isUpdating = true);
+                        final success = await AssignmentService.manualAssign(issueId, s);
+                        if (mounted) setState(() => _isUpdating = false);
+                        if (success) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Staff assigned successfully')),
+                          );
+                        }
+                      },
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   Color _getStatusColor(String status) {
@@ -84,6 +140,7 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
     final issue = issueProvider.getById(widget.issueId);
     final user = context.watch<AuthProvider>().userModel;
     final isAdmin = user?.role == 'admin';
+    final isStaff = user?.role == 'staff';
 
     if (issue == null) {
       return Scaffold(
@@ -104,6 +161,7 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
       );
     }
 
+    final isAssignedStaff = user?.uid == issue.assignedStaffId;
     final isResolved = issue.status == statusResolved;
 
     return Scaffold(
@@ -353,6 +411,59 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
               const SizedBox(height: 32),
             ],
 
+            const SizedBox(height: 32),
+
+            // Assigned Staff Section
+            const Text('Assigned Personnel',
+                style: TextStyle(
+                    color: Color(0xFF111827),
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800)),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: const Color(0xFFF3F4F6)),
+              ),
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    backgroundColor: const Color(0xFF3ECFCF).withValues(alpha: 0.1),
+                    child: const Icon(Icons.person_pin_rounded, color: Color(0xFF3ECFCF)),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          issue.assignedStaffName ?? 'Assigning automatically...',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF111827),
+                          ),
+                        ),
+                        if (issue.assignedStaffName != null)
+                          const Text(
+                            'Maintenance Specialist',
+                            style: TextStyle(fontSize: 12, color: Color(0xFF6B7280)),
+                          ),
+                      ],
+                    ),
+                  ),
+                  if (isAdmin)
+                    TextButton.icon(
+                      onPressed: () => _showReassignDialog(issue.id),
+                      icon: const Icon(Icons.edit_rounded, size: 16),
+                      label: const Text('Change'),
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 32),
+
             // Reporter Details
             const Text('Reported By',
                 style: TextStyle(
@@ -454,14 +565,14 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
             ],
 
             // -----------------------------------------------------------------
-            // ADMIN CONTROLS SECTION
+            // ACTIONS SECTION (ADMİN & STAFF)
             // -----------------------------------------------------------------
-            if (isAdmin && !isResolved) ...[
+            if ((isAdmin || isAssignedStaff) && !isResolved) ...[
               const SizedBox(height: 40),
               const Divider(color: Color(0xFFE5E7EB)),
               const SizedBox(height: 24),
-              const Text('Admin Actions',
-                  style: TextStyle(
+              Text(isAdmin ? 'Admin Actions' : 'Staff Actions',
+                  style: const TextStyle(
                       color: Color(0xFF111827),
                       fontSize: 22,
                       fontWeight: FontWeight.w900,
@@ -471,8 +582,10 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
                 controller: _commentController,
                 maxLines: 3,
                 style: const TextStyle(color: Color(0xFF111827), fontWeight: FontWeight.w500),
-                decoration: const InputDecoration(
-                  labelText: 'Add a response or update for the student',
+                decoration: InputDecoration(
+                  labelText: isAdmin 
+                    ? 'Add a response or update for the student'
+                    : 'Add a note about the fix (Optional)',
                   alignLabelWithHint: true,
                 ),
               ),
@@ -485,7 +598,7 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
                   spacing: 12,
                   runSpacing: 12,
                   children: [
-                    if (issue.status == statusPending)
+                    if (isAdmin && issue.status == statusPending)
                       _buildAdminButton(
                         label: 'Assign',
                         color: const Color(0xFF6C63FF),
