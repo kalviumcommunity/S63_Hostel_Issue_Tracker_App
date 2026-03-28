@@ -7,6 +7,7 @@ import '../../widgets/issue_card.dart';
 import '../../widgets/stats_row.dart';
 import '../profile/profile_screen.dart';
 import '../issues/my_complaints_screen.dart';
+import '../../widgets/issue_card_skeleton.dart';
 
 class StudentDashboard extends StatefulWidget {
   const StudentDashboard({super.key});
@@ -94,7 +95,7 @@ class _HomeTab extends StatelessWidget {
         },
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-          physics: const AlwaysScrollableScrollPhysics(),
+          physics: const ClampingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -176,28 +177,42 @@ class _HomeTab extends StatelessWidget {
               ),
               const SizedBox(height: 16),
 
-              if (issueProvider.issues.isEmpty)
+              if (issueProvider.isLoading && issueProvider.issues.isEmpty)
+                ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: 3,
+                  itemBuilder: (_, __) => const IssueCardSkeleton(),
+                )
+              else if (issueProvider.issues.isEmpty)
                 Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.symmetric(vertical: 40),
+                  padding: const EdgeInsets.symmetric(vertical: 60),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(24),
                     border: Border.all(color: const Color(0xFFF3F4F6)),
                   ),
-                  child: const Column(
+                  child: Column(
                     children: [
-                      Icon(Icons.check_circle_outline_rounded,
-                          size: 60, color: Color(0xFFD1FAE5)),
-                      SizedBox(height: 16),
-                      Text('All clear!',
+                      Container(
+                        padding: const EdgeInsets.all(20),
+                        decoration: const BoxDecoration(
+                          color: Color(0xFFECFDF5),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.celebration_rounded,
+                            size: 40, color: Color(0xFF10B981)),
+                      ),
+                      const SizedBox(height: 20),
+                      const Text('All Clear! 🎉',
                           style: TextStyle(
                               color: Color(0xFF111827),
-                              fontSize: 18,
-                              fontWeight: FontWeight.w700)),
-                      SizedBox(height: 6),
-                      Text('No issues reported yet.',
-                          style: TextStyle(color: Color(0xFF6B7280))),
+                              fontSize: 20,
+                              fontWeight: FontWeight.w800)),
+                      const SizedBox(height: 8),
+                      const Text('Your track record is spotless.',
+                          style: TextStyle(color: Color(0xFF6B7280), fontWeight: FontWeight.w500)),
                     ],
                   ),
                 )

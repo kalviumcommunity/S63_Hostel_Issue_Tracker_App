@@ -18,6 +18,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _roomController = TextEditingController();
   final _adminCodeController = TextEditingController();
   String _selectedBlock = 'Block A';
+  String _selectedRole = 'student';
+  String _selectedCategory = 'Electricity';
   bool _obscurePassword = true;
 
   final List<String> _blocks = [
@@ -38,7 +40,28 @@ class _RegisterScreenState extends State<RegisterScreen> {
     if (!_formKey.currentState!.validate()) return;
     
     final auth = context.read<AuthProvider>();
-    final role = _adminCodeController.text.trim() == 'ADMIN123' ? 'admin' : 'student';
+    
+    String finalRole = 'student';
+    final secretCode = _adminCodeController.text.trim();
+
+    // 🛡️ ROLE VALIDATION LOGIC 🛡️
+    if (secretCode == 'ADMIN123') {
+      finalRole = 'admin';
+    } else if (secretCode == 'STAFF123') {
+      finalRole = 'staff';
+    } else {
+      // 🛑 BLOCK IF NO SECRET PROVIDED FOR STAFF/ADMIN ROLES
+      if (_selectedRole == 'staff') {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('You need the Staff Secret Code to register as staff!'),
+            backgroundColor: Color(0xFFEF4444), // Scarlet red 
+          ),
+        );
+        return; // Stop registration
+      }
+      finalRole = 'student';
+    }
 
     final success = await auth.register(
       email: _emailController.text.trim(),
@@ -46,7 +69,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
       name: _nameController.text.trim(),
       roomNumber: _roomController.text.trim(),
       hostelBlock: _selectedBlock,
-      role: role,
+      role: finalRole,
+      staffCategory: finalRole == 'staff' ? _selectedCategory : null,
     );
     if (success && mounted) {
       context.go('/home');
@@ -93,6 +117,67 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 key: _formKey,
                 child: Column(
                   children: [
+                    // --- HIGH VISIBILITY ROLE SELECTION ---
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF6C63FF).withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: const Color(0xFF6C63FF).withValues(alpha: 0.2)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'ACCOUNT TYPE',
+                            style: TextStyle(
+                              color: Color(0xFF6C63FF),
+                              fontSize: 11,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 1.2,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          DropdownButtonFormField<String>(
+                            value: _selectedRole,
+                            dropdownColor: Colors.white,
+                            style: const TextStyle(color: Color(0xFF111827), fontWeight: FontWeight.w500),
+                            decoration: const InputDecoration(
+                              labelText: 'I am a...',
+                              prefixIcon: Icon(Icons.badge_outlined, color: Color(0xFF6C63FF)),
+                            ),
+                            items: const [
+                              DropdownMenuItem(value: 'student', child: Text('Student')),
+                              DropdownMenuItem(value: 'staff', child: Text('Staff / Maintenance')),
+                            ],
+                            onChanged: (val) => setState(() => _selectedRole = val!),
+                          ),
+                          if (_selectedRole == 'staff') ...[
+                            const SizedBox(height: 16),
+                            DropdownButtonFormField<String>(
+                              value: _selectedCategory,
+                              dropdownColor: Colors.white,
+                              style: const TextStyle(color: Color(0xFF111827), fontWeight: FontWeight.w500),
+                              decoration: const InputDecoration(
+                                labelText: 'Specialization Category',
+                                prefixIcon: Icon(Icons.category_outlined, color: Color(0xFF6C63FF)),
+                              ),
+                              items: const [
+                                DropdownMenuItem(value: 'Electricity', child: Text('Electricity')),
+                                DropdownMenuItem(value: 'Water Problem', child: Text('Water Problem')),
+                                DropdownMenuItem(value: 'Mess Food', child: Text('Mess Food')),
+                                DropdownMenuItem(value: 'Room Maintenance', child: Text('Room Maintenance')),
+                                DropdownMenuItem(value: 'Cleanliness', child: Text('Cleanliness')),
+                                DropdownMenuItem(value: 'Internet / WiFi', child: Text('Internet / WiFi')),
+                                DropdownMenuItem(value: 'Security', child: Text('Security')),
+                              ],
+                              onChanged: (val) => setState(() => _selectedCategory = val!),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 24),
                     _buildField(
                       controller: _nameController,
                       label: 'Full Name',
@@ -127,38 +212,40 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                     const SizedBox(height: 16),
                     
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _buildField(
-                            controller: _roomController,
-                            label: 'Room No.',
-                            icon: Icons.meeting_room_outlined,
-                            validator: (v) => v!.isEmpty ? 'Required' : null,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: DropdownButtonFormField<String>(
-                            value: _selectedBlock,
-                            dropdownColor: Colors.white,
-                            style: const TextStyle(color: Color(0xFF111827), fontWeight: FontWeight.w500),
-                            icon: const Icon(Icons.keyboard_arrow_down_rounded, color: Color(0xFF9CA3AF)),
-                            decoration: const InputDecoration(
-                              labelText: 'Block',
-                              prefixIcon: Icon(Icons.business_outlined, color: Color(0xFF9CA3AF)),
+                    if (_selectedRole == 'student') ...[
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildField(
+                              controller: _roomController,
+                              label: 'Room No.',
+                              icon: Icons.meeting_room_outlined,
+                              validator: (v) => v!.isEmpty ? 'Required' : null,
                             ),
-                            items: _blocks.map((b) => DropdownMenuItem(value: b, child: Text(b))).toList(),
-                            onChanged: (val) => setState(() => _selectedBlock = val!),
                           ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: DropdownButtonFormField<String>(
+                              value: _selectedBlock,
+                              dropdownColor: Colors.white,
+                              style: const TextStyle(color: Color(0xFF111827), fontWeight: FontWeight.w500),
+                              icon: const Icon(Icons.keyboard_arrow_down_rounded, color: Color(0xFF9CA3AF)),
+                              decoration: const InputDecoration(
+                                labelText: 'Block',
+                                prefixIcon: Icon(Icons.business_outlined, color: Color(0xFF9CA3AF)),
+                              ),
+                              items: _blocks.map((b) => DropdownMenuItem(value: b, child: Text(b))).toList(),
+                              onChanged: (val) => setState(() => _selectedBlock = val!),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                    ],
                     
                     _buildField(
                       controller: _adminCodeController,
-                      label: 'Admin Secret Code (Optional)',
+                      label: 'Secret Code (Required for Admin/Staff)',
                       icon: Icons.admin_panel_settings_outlined,
                     ),
                     const SizedBox(height: 32),

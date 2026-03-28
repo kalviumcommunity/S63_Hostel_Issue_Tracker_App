@@ -111,26 +111,58 @@ class HostelIssueTrackerApp extends StatelessWidget {
     );
   }
 
+  CustomTransitionPage _fadeScaleTransition(Widget child, LocalKey key) {
+    return CustomTransitionPage(
+      key: key,
+      child: child,
+      transitionsBuilder: (context, animation, secondaryAnimation, child) {
+        return FadeTransition(
+          opacity: CurveTween(curve: Curves.easeInOutCirc).animate(animation),
+          child: ScaleTransition(
+            scale: Tween<double>(begin: 0.98, end: 1.0).animate(
+              CurvedAnimation(parent: animation, curve: Curves.easeOutBack),
+            ),
+            child: child,
+          ),
+        );
+      },
+    );
+  }
+
   GoRouter get _router => GoRouter(
         initialLocation: '/',
         routes: [
-          GoRoute(path: '/', builder: (context, state) => const SplashScreen()),
-          GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
-          GoRoute(path: '/register', builder: (context, state) => const RegisterScreen()),
-          GoRoute(path: '/home', builder: (context, state) => const HomeScreen()),
           GoRoute(
-              path: '/create-issue',
-              builder: (context, state) => const CreateIssueScreen()),
+            path: '/', 
+            pageBuilder: (context, state) => _fadeScaleTransition(const SplashScreen(), state.pageKey),
+          ),
+          GoRoute(
+            path: '/login', 
+            pageBuilder: (context, state) => _fadeScaleTransition(const LoginScreen(), state.pageKey),
+          ),
+          GoRoute(
+            path: '/register', 
+            pageBuilder: (context, state) => _fadeScaleTransition(const RegisterScreen(), state.pageKey),
+          ),
+          GoRoute(
+            path: '/home', 
+            pageBuilder: (context, state) => _fadeScaleTransition(const HomeScreen(), state.pageKey),
+          ),
+          GoRoute(
+            path: '/create-issue',
+            pageBuilder: (context, state) => _fadeScaleTransition(const CreateIssueScreen(), state.pageKey),
+          ),
           GoRoute(
             path: '/issue/:id',
-            builder: (context, state) =>
-                IssueDetailScreen(issueId: state.pathParameters['id']!),
+            pageBuilder: (context, state) => _fadeScaleTransition(
+                IssueDetailScreen(issueId: state.pathParameters['id']!), state.pageKey),
           ),
           GoRoute(
             path: '/issue/:id/chat',
-            builder: (context, state) =>
-                IssueChatScreen(issueId: state.pathParameters['id']!),
+            pageBuilder: (context, state) => _fadeScaleTransition(
+                IssueChatScreen(issueId: state.pathParameters['id']!), state.pageKey),
           ),
         ],
       );
 }
+

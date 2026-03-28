@@ -7,6 +7,7 @@ import '../../models/issue_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/issue_provider.dart';
 import '../../services/sla_service.dart';
+import 'qr_scanner_screen.dart';
 
 class CreateIssueScreen extends StatefulWidget {
   const CreateIssueScreen({super.key});
@@ -23,6 +24,10 @@ class _CreateIssueScreenState extends State<CreateIssueScreen> {
   String _selectedCategory = 'Mess Food';
   File? _imageFile;
   bool _isSaving = false;
+  
+  // Scanned location override
+  String? _scannedLocation;
+  bool _isUsingQR = false;
 
   final List<String> _categories = [
     'Mess Food',
@@ -50,18 +55,35 @@ class _CreateIssueScreenState extends State<CreateIssueScreen> {
     }
   }
 
-  Future<void> _submitIssue() async {
+  Future<void> _submitIssue({bool ignoreDuplicates = false}) async {
     if (!_formKey.currentState!.validate()) return;
-    setState(() => _isSaving = true);
 
     final auth = context.read<AuthProvider>();
     final issueProvider = context.read<IssueProvider>();
     final user = auth.userModel;
 
-    if (user == null) {
+    if (user == null) return;
+
+    // 🔬 DUPLICATE DETECTION STEP 🔬
+    if (!ignoreDuplicates) {
+      setState(() => _isSaving = true);
+      final currentLocation = '${user.hostelBlock} - Room ${user.roomNumber}';
+      
+      final duplicates = await issueProvider.checkPotentialDuplicates(
+        title: _titleController.text.trim(),
+        category: _selectedCategory,
+        location: currentLocation,
+      );
+
       setState(() => _isSaving = false);
-      return;
+
+      if (duplicates.isNotEmpty && mounted) {
+        final shouldProceed = await _showDuplicateWarning(duplicates);
+        if (shouldProceed != true) return; 
+      }
     }
+
+    setState(() => _isSaving = true);
 
     String? imageUrl;
     if (_imageFile != null) {
@@ -78,7 +100,9 @@ class _CreateIssueScreenState extends State<CreateIssueScreen> {
       description: _descController.text.trim(),
       category: _selectedCategory,
       imageUrl: imageUrl,
-      location: '${user.hostelBlock} - Room ${user.roomNumber}',
+      location: _isUsingQR 
+          ? (_scannedLocation ?? 'Scanned Location') 
+          : '${user.hostelBlock} - Room ${user.roomNumber}',
       status: statusPending,
       createdBy: user.uid,
       createdByName: user.name,
@@ -103,6 +127,175 @@ class _CreateIssueScreenState extends State<CreateIssueScreen> {
           ),
         );
       }
+    }
+  }
+
+  Future<bool?> _showDuplicateWarning(List<IssueModel> duplicates) async {
+    return showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: const Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: Color(0xFFF59E0B), size: 28),
+            SizedBox(width: 12),
+            Text('Possible Duplicate', style: TextStyle(fontWeight: FontWeight.w900)),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'A similar issue was recently reported in this category:',
+              style: TextStyle(color: Color(0xFF6B7280)),
+            ),
+            const SizedBox(height: 16),
+            ...duplicates.take(2).map((issue) => Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF3F4F6),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(issue.title, style: const TextStyle(fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 4),
+                  Text('Status: ${issue.status.toUpperCase()}', 
+                    style: const TextStyle(fontSize: 12, color: Color(0xFF6B7280), fontWeight: FontWeight.bold)),
+                ],
+              ),
+            )),
+            const Text(
+              'Is your issue different from these?',
+              style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+            ),
+          ],
+        ),
+        actions: [
+          Row(
+            children: [
+              Expanded(
+                child: TextButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  child: const Text('Cancel Report', style: TextStyle(color: Color(0xFF6B7280))),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () => Navigator.pop(context, true),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF6C63FF),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: const Text('Yes, Continue'),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQRSection() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: _isUsingQR 
+            ? const Color(0xFF10B981).withValues(alpha: 0.08)
+            : const Color(0xFF6C63FF).withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: _isUsingQR ? const Color(0xFF10B981).withValues(alpha: 0.2) : const Color(0xFF6C63FF).withValues(alpha: 0.1),
+        ),
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: _isUsingQR ? const Color(0xFF10B981) : const Color(0xFF6C63FF),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  _isUsingQR ? Icons.check_circle_rounded : Icons.qr_code_scanner_rounded,
+                  color: Colors.white,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _isUsingQR ? 'LOCATION SCANNED' : 'QUICK REPORT',
+                      style: TextStyle(
+                        color: _isUsingQR ? const Color(0xFF10B981) : const Color(0xFF6C63FF),
+                        fontSize: 11,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 1.1,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      _isUsingQR 
+                          ? 'Reporting for: $_scannedLocation'
+                          : 'Scan a Room QR to auto-fill location',
+                      style: const TextStyle(
+                        color: Color(0xFF111827),
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (!_isUsingQR)
+                ElevatedButton(
+                  onPressed: _openQRScanner,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF6C63FF),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    minimumSize: Size.zero,
+                  ),
+                  child: const Text('Scan'),
+                )
+              else
+                IconButton(
+                  onPressed: () => setState(() {
+                    _isUsingQR = false;
+                    _scannedLocation = null;
+                  }),
+                  icon: const Icon(Icons.close_rounded, color: Color(0xFFEF4444)),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _openQRScanner() async {
+    final result = await Navigator.push<Map<String, dynamic>>(
+      context,
+      MaterialPageRoute(builder: (context) => const QRScannerScreen()),
+    );
+
+    if (result != null && mounted) {
+      setState(() {
+        _isUsingQR = true;
+        _scannedLocation = 'Block ${result['block']} - Room ${result['room']}';
+      });
     }
   }
 
@@ -176,6 +369,10 @@ class _CreateIssueScreenState extends State<CreateIssueScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // --- QR SCANNER BUTTON ---
+                    _buildQRSection(),
+                    const SizedBox(height: 32),
+
                     // --- Title Section ---
                     const Text('What is the issue?',
                         style: TextStyle(
