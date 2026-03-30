@@ -87,7 +87,7 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
                     return ListTile(
                       leading: CircleAvatar(
                         backgroundColor: const Color(0xFF6C63FF).withValues(alpha: 0.1),
-                        child: Text(s.name[0]),
+                        child: Text(s.name.isNotEmpty ? s.name[0].toUpperCase() : '?'),
                       ),
                       title: Text(s.name),
                       subtitle: Text('${s.role} • ${s.activeIssuesCount} active issues'),
@@ -475,15 +475,15 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
               children: [
                 CircleAvatar(
                   radius: 24,
-                  backgroundColor: const Color(0xFF6C63FF).withValues(alpha: 0.1),
-                  child: Text(
-                    issue.createdByName[0].toUpperCase(),
-                    style: const TextStyle(
-                        color: Color(0xFF6C63FF),
-                        fontWeight: FontWeight.w800,
-                        fontSize: 20),
-                  ),
+                backgroundColor: const Color(0xFF6C63FF).withValues(alpha: 0.1),
+                child: Text(
+                  issue.createdByName.isNotEmpty ? issue.createdByName[0].toUpperCase() : '?',
+                  style: const TextStyle(
+                      color: Color(0xFF6C63FF),
+                      fontWeight: FontWeight.w800,
+                      fontSize: 20),
                 ),
+              ),
                 const SizedBox(width: 16),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,

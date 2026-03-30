@@ -1,3 +1,6 @@
+import 'package:flutter/foundation.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 // Issue status values
 const String statusPending = 'pending';
 const String statusAssigned = 'assigned';
@@ -68,32 +71,54 @@ class IssueModel {
   });
 
   factory IssueModel.fromMap(Map<String, dynamic> map, String docId) {
-    return IssueModel(
-      id: docId,
-      title: map['title'] ?? '',
-      description: map['description'] ?? '',
-      category: map['category'] ?? 'Other',
-      status: map['status'] ?? statusPending,
-      createdBy: map['createdBy'] ?? '',
-      createdByName: map['createdByName'] ?? '',
-      location: map['location'] ?? '',
-      imageUrl: map['imageUrl'],
-      createdAt: DateTime.parse(
-          map['createdAt'] ?? DateTime.now().toIso8601String()),
-      updatedAt:
-          map['updatedAt'] != null ? DateTime.parse(map['updatedAt']) : null,
-      adminComment: map['adminComment'],
-      priority: map['priority'] ?? 'Low',
-      deadline: map['deadline'] != null
-          ? DateTime.parse(map['deadline'])
-          : DateTime.now().add(const Duration(hours: 72)),
-      isDelayed: map['isDelayed'] ?? false,
-      assignedStaffId: map['assignedStaffId'],
-      assignedStaffName: map['assignedStaffName'],
-      assignedAt: map['assignedAt'] != null ? DateTime.parse(map['assignedAt']) : null,
-      startedAt: map['startedAt'] != null ? DateTime.parse(map['startedAt']) : null,
-      resolvedAt: map['resolvedAt'] != null ? DateTime.parse(map['resolvedAt']) : null,
-    );
+    DateTime? parseDate(dynamic d) {
+      if (d == null) return null;
+      if (d is String) return DateTime.tryParse(d);
+      if (d is Timestamp) return d.toDate();
+      return null;
+    }
+
+    try {
+      return IssueModel(
+        id: docId,
+        title: map['title'] ?? 'Untitled',
+        description: map['description'] ?? '',
+        category: map['category'] ?? 'Other',
+        status: map['status'] ?? statusPending,
+        createdBy: map['createdBy'] ?? '',
+        createdByName: map['createdByName'] ?? 'Anonymous',
+        location: map['location'] ?? 'Unknown',
+        imageUrl: map['imageUrl'],
+        createdAt: parseDate(map['createdAt']) ?? DateTime.now(),
+        updatedAt: parseDate(map['updatedAt']),
+        adminComment: map['adminComment'],
+        priority: map['priority'] ?? 'Low',
+        deadline: parseDate(map['deadline']) ?? DateTime.now().add(const Duration(hours: 72)),
+        isDelayed: map['isDelayed'] ?? false,
+        assignedStaffId: map['assignedStaffId'],
+        assignedStaffName: map['assignedStaffName'],
+        assignedAt: parseDate(map['assignedAt']),
+        startedAt: parseDate(map['startedAt']),
+        resolvedAt: parseDate(map['resolvedAt']),
+      );
+    } catch (e) {
+      // Fallback for corrupt internal documents
+      debugPrint('--- [DATA-ERR] Corrupt Issue Document $docId: $e ---');
+      return IssueModel(
+        id: docId,
+        title: 'Title Error',
+        description: 'Format Mismatch',
+        category: 'Other',
+        status: statusPending,
+        createdBy: '',
+        createdByName: '',
+        location: '',
+        createdAt: DateTime.now(),
+        priority: 'Low',
+        deadline: DateTime.now(),
+        isDelayed: false,
+      );
+    }
   }
 
   Map<String, dynamic> toMap() {

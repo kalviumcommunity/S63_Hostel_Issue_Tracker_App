@@ -221,7 +221,9 @@ class AdminAnalyticsTab extends StatelessWidget {
                 borderRadius: BorderRadius.circular(24),
                 border: Border.all(color: const Color(0xFFF3F4F6)),
               ),
-              child: LineChart(
+              child: data.totalIssues == 0 
+                ? const Center(child: Text('No trend data available'))
+                : LineChart(
                 LineChartData(
                   gridData: const FlGridData(show: false),
                   titlesData: FlTitlesData(

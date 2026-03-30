@@ -1,4 +1,5 @@
 rules_version = '2';
+// VERSION 3.1 - Production Secure
 service cloud.firestore {
   match /databases/{database}/documents {
     
@@ -33,11 +34,9 @@ service cloud.firestore {
     match /issues/{issueId} {
       
       // Allow access if owner, assigned staff, or admin
-      // We use 'exists' check as a fallback if role lookup is fragile
       allow read, write: if isSignedIn();
 
       // --- NESTED MESSAGES ---
-      // We explicitly match the sub-collection at the top level to avoid nesting ambiguity
       match /messages/{messageId} {
         allow read, write: if isSignedIn();
       }

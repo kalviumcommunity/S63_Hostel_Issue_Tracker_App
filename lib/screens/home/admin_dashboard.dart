@@ -72,7 +72,9 @@ class _AdminAllIssuesTabState extends State<_AdminAllIssuesTab> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<IssueProvider>().fetchFirstPage();
+      final provider = context.read<IssueProvider>();
+      provider.fetchFirstPage();   // For 'All' tab (performance)
+      provider.listenToAllIssues(); // For 'Filtered' tabs & Analytics (Real-time)
     });
     _scrollController.addListener(_onScroll);
   }
@@ -124,7 +126,29 @@ class _AdminAllIssuesTabState extends State<_AdminAllIssuesTab> {
                 issueProvider.listenToAllIssues();
               }
             },
-            child: SingleChildScrollView(
+            child: issueProvider.error != null
+                ? Center(
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: 100, left: 32, right: 32),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.cloud_off_rounded, size: 60, color: Color(0xFFEF4444)),
+                          const SizedBox(height: 16),
+                          const Text('Connection Link Broken', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Color(0xFF111827))),
+                          const SizedBox(height: 8),
+                          Text(issueProvider.error!, textAlign: TextAlign.center, style: const TextStyle(color: Color(0xFF6B7280))),
+                          const SizedBox(height: 24),
+                          ElevatedButton.icon(
+                            onPressed: () => issueProvider.listenToAllIssues(),
+                            icon: const Icon(Icons.refresh_rounded),
+                            label: const Text('Re-Sync Dashboard'),
+                          )
+                        ],
+                      ),
+                    ),
+                  )
+                : SingleChildScrollView(
               controller: _scrollController,
               padding: const EdgeInsets.only(left: 24, right: 24, top: 180, bottom: 20),
               physics: const ClampingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),

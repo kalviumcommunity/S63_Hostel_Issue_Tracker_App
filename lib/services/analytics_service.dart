@@ -56,8 +56,8 @@ class AnalyticsService {
         averageResolutionTime: Duration.zero,
         issueCategoryCounts: {},
         blockCounts: {},
-        last7DaysCounts: {},
-        hourlyTrends: {},
+        last7DaysCounts: {for (var i = 0; i < 7; i++) i: 0},
+        hourlyTrends: {for (var i = 0; i < 24; i++) i: 0},
       );
     }
 

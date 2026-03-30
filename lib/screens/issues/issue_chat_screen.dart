@@ -20,7 +20,13 @@ class _IssueChatScreenState extends State<IssueChatScreen> {
   final ChatService _chatService = ChatService();
   final TextEditingController _msgController = TextEditingController();
   final FocusNode _focusNode = FocusNode();
-  bool _isSending = false;
+  late Stream<List<MessageModel>> _messagesStream;
+
+  @override
+  void initState() {
+    super.initState();
+    _messagesStream = _chatService.getMessagesStream(widget.issueId);
+  }
 
   @override
   void dispose() {
@@ -100,15 +106,13 @@ class _IssueChatScreenState extends State<IssueChatScreen> {
             // Chat List
             Expanded(
               child: StreamBuilder<List<MessageModel>>(
-                stream: _chatService.getMessagesStream(widget.issueId),
+                stream: _messagesStream,
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return const Center(child: CircularProgressIndicator(color: Color(0xFF6C63FF)));
                   }
                   
-                  if (snapshot.hasError) {
-                    return Center(child: Text('Error: ${snapshot.error}', style: const TextStyle(color: Color(0xFF6B7280))));
-                  }
+
                   
                   final messages = snapshot.data ?? [];
                   
@@ -185,21 +189,23 @@ class _IssueChatScreenState extends State<IssueChatScreen> {
                           focusedBorder: InputBorder.none,
                           contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 14),
                         ),
-                        onSubmitted: (_) {
-                          if (user != null) {
-                            _sendMessage(user.uid, user.name, user.role == 'admin');
-                          }
-                        },
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  GestureDetector(
-                    onTap: () {
-                      if (user != null && !_isSending) {
-                        _sendMessage(user.uid, user.name, user.role == 'admin');
-                      }
-                    },
+                onSubmitted: (_) {
+                  if (user != null) {
+                    final isStaffOrAdmin = user.role == 'staff' || user.role == 'admin';
+                    _sendMessage(user.uid, user.name, isStaffOrAdmin);
+                  }
+                },
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          GestureDetector(
+            onTap: () {
+              if (user != null) {
+                final isStaffOrAdmin = user.role == 'staff' || user.role == 'admin';
+                _sendMessage(user.uid, user.name, isStaffOrAdmin);
+              }
+            },
                     child: Container(
                       width: 50,
                       height: 50,
@@ -214,9 +220,7 @@ class _IssueChatScreenState extends State<IssueChatScreen> {
                           )
                         ]
                       ),
-                      child: _isSending 
-                          ? const Center(child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)))
-                          : const Icon(Icons.send_rounded, color: Colors.white, size: 22),
+                      child: const Icon(Icons.send_rounded, color: Colors.white, size: 22),
                     ),
                   ),
                 ],
@@ -249,18 +253,18 @@ class _MessageBubble extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           if (!isMe) ...[
-            CircleAvatar(
-              radius: 16,
-              backgroundColor: message.isAdmin ? const Color(0xFFEF4444).withValues(alpha: 0.1) : const Color(0xFF3ECFCF).withValues(alpha: 0.1),
-              child: Text(
-                message.senderName[0].toUpperCase(),
-                style: TextStyle(
-                  color: message.isAdmin ? const Color(0xFFEF4444) : const Color(0xFF3ECFCF),
-                  fontWeight: FontWeight.w800,
-                  fontSize: 14
+              CircleAvatar(
+                radius: 18,
+                backgroundColor: isMe ? Colors.white.withValues(alpha: 0.2) : const Color(0xFF6C63FF).withValues(alpha: 0.1),
+                child: Text(
+                  message.senderName.isNotEmpty ? message.senderName[0].toUpperCase() : '?',
+                  style: TextStyle(
+                    color: isMe ? Colors.white : const Color(0xFF6C63FF),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
               ),
-            ),
             const SizedBox(width: 8),
           ],
           
