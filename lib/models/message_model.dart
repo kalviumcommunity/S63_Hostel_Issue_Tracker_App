@@ -7,6 +7,7 @@ class MessageModel {
   final String senderName;
   final bool isAdmin;
   final DateTime timestamp;
+  final DateTime clientTimestamp;
 
   MessageModel({
     required this.id,
@@ -15,6 +16,7 @@ class MessageModel {
     required this.senderName,
     required this.isAdmin,
     required this.timestamp,
+    required this.clientTimestamp,
   });
 
   factory MessageModel.fromMap(Map<String, dynamic> map, String docId) {
@@ -24,7 +26,14 @@ class MessageModel {
     } else if (map['timestamp'] is String) {
       parsedTime = DateTime.parse(map['timestamp']);
     } else {
-      parsedTime = DateTime.now();
+      parsedTime = DateTime.timestamp(); // Use server-ish time if unknown
+    }
+
+    DateTime clientTime;
+    if (map['clientTimestamp'] != null) {
+      clientTime = DateTime.tryParse(map['clientTimestamp']) ?? parsedTime;
+    } else {
+      clientTime = parsedTime;
     }
 
     return MessageModel(
@@ -34,6 +43,7 @@ class MessageModel {
       senderName: map['senderName'] ?? 'Unknown',
       isAdmin: map['isAdmin'] ?? false,
       timestamp: parsedTime,
+      clientTimestamp: clientTime,
     );
   }
 
@@ -44,6 +54,7 @@ class MessageModel {
       'senderName': senderName,
       'isAdmin': isAdmin,
       'timestamp': timestamp.toIso8601String(),
+      'clientTimestamp': clientTimestamp.toIso8601String(),
     };
   }
 }

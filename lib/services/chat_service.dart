@@ -47,10 +47,21 @@ class ChatService {
         .orderBy('timestamp', descending: true)
         .snapshots(includeMetadataChanges: true)
         .map((snapshot) {
-          debugPrint('--- [CHAT] Stream received ${snapshot.docs.length} messages ---');
-          return snapshot.docs
+          final messages = snapshot.docs
               .map((doc) => MessageModel.fromMap(doc.data(), doc.id))
               .toList();
+          
+          // CRITICAL: Stable sort for local updates
+          // Newer messages at index 0 (for reverse ListView)
+          messages.sort((a, b) {
+            // First try server timestamp
+            int cmp = b.timestamp.compareTo(a.timestamp);
+            if (cmp != 0) return cmp;
+            // Fallback to high-precision client timestamp for local stability
+            return b.clientTimestamp.compareTo(a.clientTimestamp);
+          });
+          
+          return messages;
         });
   }
 
@@ -64,12 +75,14 @@ class ChatService {
     try {
       debugPrint('--- [CHAT] Attempting to send message to Issue: $issueId ---');
       
+      final now = DateTime.now();
       final messageData = {
         'text': text,
         'senderId': senderId,
         'senderName': senderName,
         'isAdmin': isAdmin,
         'timestamp': FieldValue.serverTimestamp(),
+        'clientTimestamp': now.toIso8601String(), // For stable local/secondary sort
       };
 
       // 1. CRITICAL: Save to Firestore first (Don't let notification errors block this)
