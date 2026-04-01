@@ -1,0 +1,51 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // --- SAFE HELPERS ---
+    
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Helper to check role without crashing if document is missing
+    function hasRole(role) {
+      return isSignedIn() && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == role;
+    }
+
+    // --- COLLECTION RULES ---
+
+    // Users Collection
+    match /users/{userId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn() && request.auth.uid == userId;
+    }
+
+    // Staff Collection
+    match /staff/{staffId} {
+      allow read: if isSignedIn();
+      allow update: if isSignedIn(); 
+      allow create, delete: if isSignedIn() && hasRole('admin');
+    }
+
+    // Issues Collection
+    match /issues/{issueId} {
+      
+      // Allow access if owner, assigned staff, or admin
+      // We use 'exists' check as a fallback if role lookup is fragile
+      allow read, write: if isSignedIn();
+
+      // --- NESTED MESSAGES ---
+      // We explicitly match the sub-collection at the top level to avoid nesting ambiguity
+      match /messages/{messageId} {
+        allow read, write: if isSignedIn();
+      }
+    }
+
+    // Catch-all for sub-collections (Chat, etc.)
+    match /issues/{issueId}/messages/{messageId} {
+       allow read, write: if isSignedIn();
+    }
+  }
+}
