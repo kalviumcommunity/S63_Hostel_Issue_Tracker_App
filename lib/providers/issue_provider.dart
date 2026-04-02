@@ -33,7 +33,10 @@ class IssueProvider extends ChangeNotifier {
 
   // Filtered getters
   List<IssueModel> get pendingIssues =>
-      _issues.where((i) => i.status == statusPending || i.status == statusAssigned).toList();
+      _issues.where((i) {
+        final s = i.status.toLowerCase();
+        return s == statusPending || s == statusAssigned || s == 'open';
+      }).toList();
   List<IssueModel> get inProgressIssues =>
       _issues.where((i) => i.status == statusInProgress).toList();
   List<IssueModel> get resolvedIssues =>
@@ -67,11 +70,13 @@ class IssueProvider extends ChangeNotifier {
         .orderBy('createdAt', descending: true)
         .snapshots()
         .listen((snapshot) {
+      debugPrint('--- [ADMIN] Received ${snapshot.docs.length} issues from Firestore ---');
       _issues = snapshot.docs
           .map((doc) => IssueModel.fromMap(doc.data(), doc.id))
           .toList();
       notifyListeners();
     }, onError: (e) {
+      debugPrint('--- [ADMIN] Error: $e ---');
       _error = e.toString();
       notifyListeners();
     });
@@ -88,13 +93,14 @@ class IssueProvider extends ChangeNotifier {
         .where('createdBy', isEqualTo: userId)
         .snapshots()
         .listen((snapshot) {
+      debugPrint('--- [STUDENT] Received ${snapshot.docs.length} issues for user $userId ---');
       _issues = snapshot.docs
           .map((doc) => IssueModel.fromMap(doc.data(), doc.id))
           .toList();
-      // Sort locally to avoid Firestore composite index requirement
       _issues.sort((a, b) => b.createdAt.compareTo(a.createdAt));
       notifyListeners();
     }, onError: (e) {
+      debugPrint('--- [STUDENT] Error: $e ---');
       _error = e.toString();
       notifyListeners();
     });

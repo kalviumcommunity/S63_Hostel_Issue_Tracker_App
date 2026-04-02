@@ -39,11 +39,12 @@ class AdminAnalyticsTab extends StatelessWidget {
             Row(
               children: [
                 Expanded(
-                  child: _InsightMiniCard(
-                    title: 'Growth (Weekly)',
-                    value: '${data.weeklyGrowthRate > 0 ? '+' : ''}${data.weeklyGrowthRate.toStringAsFixed(1)}%',
-                    icon: data.weeklyGrowthRate > 0 ? Icons.trending_up_rounded : Icons.trending_down_rounded,
-                    color: data.weeklyGrowthRate > 0 ? const Color(0xFFEF4444) : const Color(0xFF10B981),
+                  child: _MetricCard(
+                    title: 'Total Issues',
+                    value: '${data.totalIssues}',
+                    icon: Icons.all_inbox_rounded,
+                    color: const Color(0xFF6366F1),
+                    bgColor: const Color(0xFF6366F1).withValues(alpha: 0.1),
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -58,9 +59,18 @@ class AdminAnalyticsTab extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 16),
+            _InsightMiniCard(
+              title: 'Weekly Issue Growth',
+              value: '${data.weeklyGrowthRate > 0 ? '+' : ''}${data.weeklyGrowthRate.toStringAsFixed(1)}%',
+              icon: data.weeklyGrowthRate > 0 ? Icons.trending_up_rounded : Icons.trending_down_rounded,
+              color: data.weeklyGrowthRate > 0 ? const Color(0xFFEF4444) : const Color(0xFF10B981),
+            ),
+            const SizedBox(height: 16),
             _HighlightBanner(
               title: 'Hottest Zone',
-              subtitle: '${data.mostProblematicBlock} has the most reports (${data.blockCounts[data.mostProblematicBlock]} active issues)',
+              subtitle: data.blockCounts.isEmpty
+                  ? 'No location data yet'
+                  : '${data.mostProblematicBlock} has the most reports (${data.blockCounts[data.mostProblematicBlock] ?? 0} active issues)',
               icon: Icons.location_on_rounded,
               color: const Color(0xFFF59E0B),
             ),
@@ -96,13 +106,16 @@ class AdminAnalyticsTab extends StatelessWidget {
                 children: [
                   SizedBox(
                     height: 200,
-                    child: data.totalIssues == 0 
-                      ? const Center(child: Text('No data yet')) 
-                      : PieChart(
+                    child: data.totalIssues == 0
+                      ? const Center(child: Text('No data yet'))
+                      : (data.pendingIssues + data.inProgressIssues + data.resolvedIssues == 0)
+                          ? const Center(child: Text('No data yet'))
+                          : PieChart(
                           PieChartData(
                             sectionsSpace: 4,
                             centerSpaceRadius: 60,
                             sections: [
+                              if (data.pendingIssues > 0)
                               PieChartSectionData(
                                 color: const Color(0xFFEF4444),
                                 value: data.pendingIssues.toDouble(),
@@ -113,6 +126,7 @@ class AdminAnalyticsTab extends StatelessWidget {
                                     fontWeight: FontWeight.bold,
                                     color: Colors.white),
                               ),
+                              if (data.inProgressIssues > 0)
                               PieChartSectionData(
                                 color: const Color(0xFFF59E0B),
                                 value: data.inProgressIssues.toDouble(),
@@ -123,6 +137,7 @@ class AdminAnalyticsTab extends StatelessWidget {
                                     fontWeight: FontWeight.bold,
                                     color: Colors.white),
                               ),
+                              if (data.resolvedIssues > 0)
                               PieChartSectionData(
                                 color: const Color(0xFF10B981),
                                 value: data.resolvedIssues.toDouble(),
@@ -169,9 +184,17 @@ class AdminAnalyticsTab extends StatelessWidget {
                 borderRadius: BorderRadius.circular(24),
                 border: Border.all(color: const Color(0xFFF3F4F6)),
               ),
-              child: Column(
+              child: data.blockCounts.isEmpty
+                  ? const Center(
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(vertical: 24),
+                        child: Text('No location data yet', style: TextStyle(color: Color(0xFF9CA3AF))),
+                      ),
+                    )
+                  : Column(
                 children: data.blockCounts.entries.map((entry) {
-                  final percent = entry.value / data.totalIssues;
+                  final total = data.totalIssues > 0 ? data.totalIssues : 1; // avoid division by zero
+                  final percent = entry.value / total;
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 16),
                     child: Column(
@@ -188,7 +211,7 @@ class AdminAnalyticsTab extends StatelessWidget {
                         ClipRRect(
                           borderRadius: BorderRadius.circular(4),
                           child: LinearProgressIndicator(
-                            value: percent,
+                            value: percent.clamp(0.0, 1.0),
                             backgroundColor: const Color(0xFFF3F4F6),
                             color: const Color(0xFF6C63FF),
                             minHeight: 8,
@@ -221,7 +244,11 @@ class AdminAnalyticsTab extends StatelessWidget {
                 borderRadius: BorderRadius.circular(24),
                 border: Border.all(color: const Color(0xFFF3F4F6)),
               ),
-              child: LineChart(
+              child: data.hourlyTrends.values.every((v) => v == 0)
+                  ? const Center(
+                      child: Text('No hourly data yet', style: TextStyle(color: Color(0xFF9CA3AF))),
+                    )
+                  : LineChart(
                 LineChartData(
                   gridData: const FlGridData(show: false),
                   titlesData: FlTitlesData(
@@ -238,6 +265,7 @@ class AdminAnalyticsTab extends StatelessWidget {
                     rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
                   ),
                   borderData: FlBorderData(show: false),
+                  minY: 0,
                   lineBarsData: [
                     LineChartBarData(
                       spots: data.hourlyTrends.entries.map((e) => FlSpot(e.key.toDouble(), e.value.toDouble())).toList(),

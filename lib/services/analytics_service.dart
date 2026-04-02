@@ -83,9 +83,18 @@ class AnalyticsService {
 
     for (var issue in issues) {
       // 1. Basic Status counts
-      if (issue.status == statusPending || issue.status == statusAssigned) pending++;
-      if (issue.status == statusInProgress) inP++;
-      if (issue.status == statusResolved) resolved++;
+      // We group 'open', 'pending', and 'assigned' into pending for the breakdown
+      final s = issue.status.toLowerCase();
+      if (s == statusPending || s == statusAssigned || s == 'open') {
+        pending++;
+      } else if (s == statusInProgress || s == 'in progress') {
+        inP++;
+      } else if (s == statusResolved || s == 'resolved') {
+        resolved++;
+      } else {
+        // Catch-all for any other status to ensure total always matches
+        pending++; 
+      }
 
       // 2. Weekly comparison
       if (issue.createdAt.isAfter(sevenDaysAgo)) {
