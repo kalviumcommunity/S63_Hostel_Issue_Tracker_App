@@ -72,7 +72,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
       role: finalRole,
       staffCategory: finalRole == 'staff' ? _selectedCategory : null,
     );
-    if (success && mounted) {
+    if (!context.mounted) return;
+    if (success) {
       context.go('/home');
     }
   }

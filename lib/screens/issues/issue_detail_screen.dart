@@ -96,6 +96,7 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
                         Navigator.pop(context);
                         setState(() => _isUpdating = true);
                         final success = await AssignmentService.manualAssign(issueId, s);
+                        if (!context.mounted) return;
                         if (mounted) setState(() => _isUpdating = false);
                         if (success) {
                           ScaffoldMessenger.of(context).showSnackBar(
@@ -140,7 +141,6 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
     final issue = issueProvider.getById(widget.issueId);
     final user = context.watch<AuthProvider>().userModel;
     final isAdmin = user?.role == 'admin';
-    final isStaff = user?.role == 'staff';
 
     if (issue == null) {
       return Scaffold(
