@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 // Issue status values
 const String statusPending = 'pending';
 const String statusAssigned = 'assigned';
@@ -78,22 +80,25 @@ class IssueModel {
       createdByName: map['createdByName'] ?? '',
       location: map['location'] ?? '',
       imageUrl: map['imageUrl'],
-      createdAt: DateTime.parse(
-          map['createdAt'] ?? DateTime.now().toIso8601String()),
-      updatedAt:
-          map['updatedAt'] != null ? DateTime.parse(map['updatedAt']) : null,
+      createdAt: _parseDateTime(map['createdAt']) ?? DateTime.now(),
+      updatedAt: _parseDateTime(map['updatedAt'], isNullable: true),
       adminComment: map['adminComment'],
       priority: map['priority'] ?? 'Low',
-      deadline: map['deadline'] != null
-          ? DateTime.parse(map['deadline'])
-          : DateTime.now().add(const Duration(hours: 72)),
+      deadline: _parseDateTime(map['deadline']) ?? DateTime.now().add(const Duration(hours: 72)),
       isDelayed: map['isDelayed'] ?? false,
       assignedStaffId: map['assignedStaffId'],
       assignedStaffName: map['assignedStaffName'],
-      assignedAt: map['assignedAt'] != null ? DateTime.parse(map['assignedAt']) : null,
-      startedAt: map['startedAt'] != null ? DateTime.parse(map['startedAt']) : null,
-      resolvedAt: map['resolvedAt'] != null ? DateTime.parse(map['resolvedAt']) : null,
+      assignedAt: _parseDateTime(map['assignedAt'], isNullable: true),
+      startedAt: _parseDateTime(map['startedAt'], isNullable: true),
+      resolvedAt: _parseDateTime(map['resolvedAt'], isNullable: true),
     );
+  }
+
+  static DateTime? _parseDateTime(dynamic value, {bool isNullable = false}) {
+    if (value == null) return isNullable ? null : DateTime.now();
+    if (value is Timestamp) return value.toDate();
+    if (value is String) return DateTime.tryParse(value) ?? (isNullable ? null : DateTime.now());
+    return isNullable ? null : DateTime.now();
   }
 
   Map<String, dynamic> toMap() {
