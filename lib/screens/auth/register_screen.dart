@@ -170,6 +170,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 DropdownMenuItem(value: 'Cleanliness', child: Text('Cleanliness')),
                                 DropdownMenuItem(value: 'Internet / WiFi', child: Text('Internet / WiFi')),
                                 DropdownMenuItem(value: 'Security', child: Text('Security')),
+                                DropdownMenuItem(value: 'Other', child: Text('Other')),
                               ],
                               onChanged: (val) => setState(() => _selectedCategory = val!),
                             ),
