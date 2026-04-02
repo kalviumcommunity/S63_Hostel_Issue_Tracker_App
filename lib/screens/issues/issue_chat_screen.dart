@@ -22,7 +22,6 @@ class _IssueChatScreenState extends State<IssueChatScreen> {
   final TextEditingController _msgController = TextEditingController();
   final FocusNode _focusNode = FocusNode();
   late Stream<List<MessageModel>> _messageStream;
-  bool _isSending = false;
 
   @override
   void initState() {

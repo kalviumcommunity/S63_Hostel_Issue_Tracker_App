@@ -20,6 +20,7 @@ class NotificationService {
   NotificationService._internal();
 
   Future<void> initialize() async {
+    print("--- [NOTIFICATION] Initializing Service... ---");
     // 1. Request Permission
     NotificationSettings settings = await _fcm.requestPermission(
       alert: true,
@@ -27,9 +28,7 @@ class NotificationService {
       sound: true,
     );
 
-    if (settings.authorizationStatus == AuthorizationStatus.authorized) {
-      debugPrint('Notification Permission Granted');
-    }
+    print("--- [NOTIFICATION] Permission Status: ${settings.authorizationStatus} ---");
 
     // 2. Initialize Local Notifications
     const AndroidInitializationSettings androidSettings =
@@ -44,6 +43,7 @@ class NotificationService {
     await _localNotifications.initialize(
       settings: initSettings,
       onDidReceiveNotificationResponse: (details) {
+        print("--- [NOTIFICATION] Notification Tapped! Payload: ${details.payload} ---");
         if (details.payload != null) {
           HostelIssueTrackerApp.navigateTo(details.payload!);
         }
@@ -65,15 +65,19 @@ class NotificationService {
 
     // 4. Handle Notification Clicks (App in background)
     FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+      print("--- [NOTIFICATION] App opened via notification: ${message.messageId} ---");
       _handleMessage(message);
     });
 
-    // 5. Handle Foreground Messages - Updated for v21 (Named Parameters)
+    // 5. Handle Foreground Messages
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+      print("--- [NOTIFICATION] NEW MESSAGE RECEIVED IN FOREGROUND! ---");
+      print("Title: ${message.notification?.title}");
+      print("Body: ${message.notification?.body}");
+      print("Data: ${message.data}");
+      
       RemoteNotification? notification = message.notification;
-      AndroidNotification? android = message.notification?.android;
-
-      if (notification != null && android != null) {
+      if (notification != null) {
         final issueId = message.data['issueId'];
         final type = message.data['type'];
         final String path = (type == 'chat') ? '/issue/$issueId/chat' : '/issue/$issueId';
@@ -87,9 +91,11 @@ class NotificationService {
               channel.id,
               channel.name,
               channelDescription: channel.description,
-              icon: android.smallIcon ?? '@mipmap/ic_launcher',
+              icon: '@mipmap/ic_launcher',
               importance: Importance.high,
               priority: Priority.high,
+              playSound: true,
+              enableVibration: true,
             ),
           ),
           payload: path,
@@ -101,6 +107,135 @@ class NotificationService {
     FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
     await updateFCMToken();
     FirebaseMessaging.instance.onTokenRefresh.listen((token) => updateFCMToken());
+    // 7. NEW: Self-Reliant Listener (Works without the JS script!)
+    _setupDirectMessageListener();
+    _setupIssueActivityListener();
+  }
+
+  StreamSubscription<QuerySnapshot>? _messageSubscription;
+  StreamSubscription<QuerySnapshot>? _issueSubscription;
+
+  void _setupIssueActivityListener() {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) return;
+
+    // We need to know the user's role to notify them correctly
+    FirebaseFirestore.instance.collection('users').doc(currentUser.uid).get().then((userDoc) {
+      if (!userDoc.exists) return;
+      final role = userDoc.data()?['role'];
+
+      _issueSubscription?.cancel();
+      _issueSubscription = FirebaseFirestore.instance
+          .collection('issues')
+          .where('createdAt', isGreaterThan: DateTime.now())
+          .snapshots()
+          .listen((snapshot) {
+        for (var change in snapshot.docChanges) {
+          if (change.type == DocumentChangeType.added) {
+            final data = change.doc.data();
+            if (data == null) continue;
+
+            // 1. Notify ADMINS about NEW issues
+            if (role == 'admin') {
+              print("--- [NOTIFICATION] Admin: New Issue Detected! ---");
+              _showLocalNotification(
+                title: "New Issue Reported",
+                body: "${data['userName']} reported: ${data['title']}",
+                payload: '/issue/${change.doc.id}',
+              );
+            }
+          } else if (change.type == DocumentChangeType.modified) {
+            final data = change.doc.data();
+            if (data == null) continue;
+
+            // 2. Notify STUDENTS about completion/assignment
+            if (role == 'student' && data['createdBy'] == currentUser.uid) {
+               print("--- [NOTIFICATION] Student: Status Update Detected! ---");
+               _showLocalNotification(
+                  title: "Issue Update",
+                  body: "Your issue '${data['title']}' is now ${data['status'].toString().toUpperCase()}",
+                  payload: '/issue/${change.doc.id}',
+               );
+            }
+            
+            // 3. Notify STAFF about assignment
+            if (role == 'staff' && data['assignedStaffId'] == currentUser.uid) {
+               print("--- [NOTIFICATION] Staff: New Assignment Detected! ---");
+                _showLocalNotification(
+                  title: "Job Assigned",
+                  body: "You have a new task: ${data['title']}",
+                  payload: '/issue/${change.doc.id}',
+               );
+            }
+          }
+        }
+      });
+    });
+  }
+
+  void _setupDirectMessageListener() {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) return;
+
+    // Cancel existing to avoid duplicates
+    _messageSubscription?.cancel();
+
+    print("--- [NOTIFICATION] Starting Direct Message Listener for: ${currentUser.uid} ---");
+
+    _messageSubscription = FirebaseFirestore.instance
+        .collectionGroup('messages')
+        .where('timestamp', isGreaterThan: DateTime.now()) // Only new ones
+        .snapshots()
+        .listen((snapshot) {
+      for (var change in snapshot.docChanges) {
+        if (change.type == DocumentChangeType.added) {
+          final data = change.doc.data();
+          // Don't notify if I am the sender
+          if (data != null && data['senderId'] != currentUser.uid) {
+            print("--- [NOTIFICATION] Direct Message Detected! ---");
+            _showLocalNotification(
+              title: "New Message",
+              body: "${data['senderName']}: ${data['text']}",
+              payload: change.doc.reference.path.contains('issues') 
+                ? '/issue/${change.doc.reference.parent.parent?.id}/chat' 
+                : null,
+            );
+          }
+        }
+      }
+    });
+  }
+
+  Future<void> _showLocalNotification({
+    required String title,
+    required String body,
+    String? payload,
+  }) async {
+    const AndroidNotificationChannel channel = AndroidNotificationChannel(
+      'high_importance_channel',
+      'High Importance Notifications',
+      importance: Importance.high,
+      playSound: true,
+      enableVibration: true,
+    );
+
+    await _localNotifications.show(
+      id: DateTime.now().millisecond,
+      title: title,
+      body: body,
+      notificationDetails: NotificationDetails(
+        android: AndroidNotificationDetails(
+          channel.id,
+          channel.name,
+          importance: Importance.high,
+          priority: Priority.high,
+          icon: '@mipmap/ic_launcher',
+          playSound: true,
+          enableVibration: true,
+        ),
+      ),
+      payload: payload,
+    );
   }
 
   void _handleMessage(RemoteMessage message) {
@@ -116,15 +251,21 @@ class NotificationService {
     try {
       String? token = await _fcm.getToken();
       String? uid = FirebaseAuth.instance.currentUser?.uid;
+      
+      // Also ensure the direct listeners are running whenever we update tokens (likely after login)
+      _setupDirectMessageListener();
+      _setupIssueActivityListener();
+
+      print("--- [NOTIFICATION] Current Token: $token ---");
       if (token != null && uid != null) {
-        await FirebaseFirestore.instance.collection('users').doc(uid).update({
+        await FirebaseFirestore.instance.collection('users').doc(uid).set({
           'fcmToken': token,
           'lastTokenUpdate': FieldValue.serverTimestamp(),
-        });
-        debugPrint('--- [NOTIFICATION] FCM Token Sync: SUCCESS ---');
+        }, SetOptions(merge: true));
+        print("--- [NOTIFICATION] Token synced to Firestore for user: $uid ---");
       }
     } catch (e) {
-      debugPrint('--- [NOTIFICATION] FCM Token Sync: FAILED ($e) ---');
+      print("--- [NOTIFICATION] Token sync FAILED: $e ---");
     }
   }
 
