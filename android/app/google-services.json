@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "558988080281",
+    "project_id": "hostel-issue-tracker-app",
+    "storage_bucket": "hostel-issue-tracker-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:558988080281:android:6dcec10122eccfd5a7b408",
+        "android_client_info": {
+          "package_name": "com.example.hostel_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCMUuqb1AOcMfibf7ElbmHh-JQGq9Qi1Eo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:558988080281:android:88e82fab6a62f09da7b408",
+        "android_client_info": {
+          "package_name": "com.palchhi.hostelnest"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCMUuqb1AOcMfibf7ElbmHh-JQGq9Qi1Eo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

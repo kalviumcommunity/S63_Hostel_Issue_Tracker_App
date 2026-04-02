@@ -39,3 +39,4 @@ Firestore is the cloud database used to store all application data. It stores in
 Firebase Authentication
 
 Firebase Authentication manages user login and identity verification. It allows residents and administrators to securely sign in to the app. This ensures that only authenticated users can report issues or manage complaints within the system.
+Sameer-s-coder ADDED.
