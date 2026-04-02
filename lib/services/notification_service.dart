@@ -42,9 +42,11 @@ class NotificationService {
     );
 
     await _localNotifications.initialize(
-      settings: initSettings,
+      InitializationSettings(android: androidSettings, iOS: iosSettings),
       onDidReceiveNotificationResponse: (details) {
-        // Handle notification click
+        if (details.payload != null) {
+          HostelIssueTrackerApp.navigateTo(details.payload!);
+        }
       },
     );
 
@@ -62,8 +64,16 @@ class NotificationService {
 
     // 4. Handle Notification Clicks (on opened app)
     FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
-      print('A new onMessageOpenedApp event was published!');
-      // TODO: Navigate to the specific issue detail
+      final issueId = message.data['issueId'];
+      final type = message.data['type'];
+      
+      if (issueId != null) {
+        if (type == 'chat') {
+           HostelIssueTrackerApp.navigateTo('/issue/$issueId/chat');
+        } else {
+           HostelIssueTrackerApp.navigateTo('/issue/$issueId');
+        }
+      }
     });
 
     // 5. Handle Foreground Messages
@@ -72,10 +82,15 @@ class NotificationService {
       AndroidNotification? android = message.notification?.android;
 
       if (notification != null && android != null) {
+        final issueId = message.data['issueId'];
+        final type = message.data['type'];
+        final String path = (type == 'chat') ? '/issue/$issueId/chat' : '/issue/$issueId';
+
         _localNotifications.show(
           id: notification.hashCode,
           title: notification.title,
           body: notification.body,
+          payload: path,
           notificationDetails: NotificationDetails(
             android: AndroidNotificationDetails(
               channel.id,

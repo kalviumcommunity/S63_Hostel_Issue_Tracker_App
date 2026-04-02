@@ -135,5 +135,83 @@ db.collectionGroup("messages").onSnapshot(async (snapshot) => {
     }
   }
 }, (error) => {
-  console.error("🔥 Snapshot listener error:", error);
+  console.error("🔥 Chat Snapshot listener error:", error);
+});
+
+
+/**
+ * 📊 REAL-TIME ISSUE STATUS LISTENER
+ * ---------------------------------
+ * This watches for status changes and notifies the creator (Student).
+ */
+let isFirstIssueSnapshot = true;
+
+db.collection("issues").onSnapshot(async (snapshot) => {
+  if (isFirstIssueSnapshot) {
+    console.log(`📊 Status listener active (Ignoring ${snapshot.docs.length} existing issues)`);
+    isFirstIssueSnapshot = false;
+    return;
+  }
+
+  const changes = snapshot.docChanges();
+
+  for (const change of changes) {
+    // We only care about modified issues (status changes)
+    if (change.type === "modified") {
+      const newData = change.doc.data();
+      const oldData = change.before.data();
+
+      // IF THE STATUS CHANGED 🔄
+      if (newData.status !== oldData.status) {
+        console.log(`🔔 STATUS CHANGE: [${newData.title}] is now [${newData.status}]`);
+
+        try {
+          const studentDoc = await db.collection("users").doc(newData.createdBy).get();
+          if (!studentDoc.exists || !studentDoc.data().fcmToken) {
+            console.log("⚠️ No student token found for status notification. Skip.");
+            continue;
+          }
+
+          const fcmToken = studentDoc.data().fcmToken;
+          let bodyText = "";
+
+          // Humanize the status
+          switch (newData.status) {
+            case "assigned":
+              bodyText = `A maintenance specialist has been assigned to "${newData.title}".`;
+              break;
+            case "in_progress":
+              bodyText = `Work has officially started on your report: "${newData.title}". 🛠️`;
+              break;
+            case "resolved":
+              bodyText = `Great news! Your issue "${newData.title}" was marked as Resolved. ✅`;
+              break;
+            default:
+              bodyText = `Your issue "${newData.title}" has been updated to: ${newData.status.toUpperCase()}`;
+          }
+
+          const payload = {
+            notification: {
+              title: "Issue Update Received",
+              body: bodyText,
+            },
+            data: {
+              issueId: change.doc.id,
+              type: "status_update",
+              click_action: "FLUTTER_NOTIFICATION_CLICK"
+            },
+            token: fcmToken
+          };
+
+          await fcm.send(payload);
+          console.log(`✅ Status Notification Sent to [${studentDoc.data().name}]`);
+
+        } catch (err) {
+          console.error("❌ Error sending status alert:", err);
+        }
+      }
+    }
+  }
+}, (error) => {
+  console.error("🔥 Status Snapshot listener error:", error);
 });
