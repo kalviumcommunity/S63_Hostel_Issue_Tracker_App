@@ -42,14 +42,17 @@ class _IssueChatScreenState extends State<IssueChatScreen> {
     if (text.isEmpty) return;
 
     _msgController.clear();
+    setState(() => _isSending = true);
     
-    _chatService.sendMessage(
+    await _chatService.sendMessage(
       issueId: widget.issueId,
       text: text,
       senderId: currentUserId,
       senderName: currentUserName,
       isAdmin: isAdmin,
     );
+
+    if (mounted) setState(() => _isSending = false);
   }
 
   @override
