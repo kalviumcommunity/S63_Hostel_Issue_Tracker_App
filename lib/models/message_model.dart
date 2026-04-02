@@ -41,7 +41,7 @@ class MessageModel {
       'senderId': senderId,
       'senderName': senderName,
       'isAdmin': isAdmin,
-      'timestamp': timestamp.toIso8601String(),
+      'timestamp': Timestamp.fromDate(timestamp),
     };
   }
 }

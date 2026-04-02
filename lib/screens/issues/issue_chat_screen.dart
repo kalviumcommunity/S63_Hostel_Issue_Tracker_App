@@ -37,22 +37,21 @@ class _IssueChatScreenState extends State<IssueChatScreen> {
     super.dispose();
   }
 
-  Future<void> _sendMessage(String currentUserId, String currentUserName, bool isAdmin) async {
+  void _sendMessage(String currentUserId, String currentUserName, bool isAdmin) {
     final text = _msgController.text.trim();
     if (text.isEmpty) return;
 
     _msgController.clear();
-    setState(() => _isSending = true);
-    
-    await _chatService.sendMessage(
+    _focusNode.requestFocus();
+
+    // Start sending but don't await (instant UI feedback)
+    _chatService.sendMessage(
       issueId: widget.issueId,
       text: text,
       senderId: currentUserId,
       senderName: currentUserName,
       isAdmin: isAdmin,
     );
-
-    if (mounted) setState(() => _isSending = false);
   }
 
   @override
@@ -133,7 +132,7 @@ class _IssueChatScreenState extends State<IssueChatScreen> {
                   }
                   
                   return ListView.builder(
-                    reverse: true, // Auto scroll to bottom
+                    reverse: true, // Newest messages at bottom, auto-scrolls
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
                     physics: const BouncingScrollPhysics(),
                     itemCount: messages.length,
@@ -201,7 +200,7 @@ class _IssueChatScreenState extends State<IssueChatScreen> {
                   const SizedBox(width: 12),
                   GestureDetector(
                     onTap: () {
-                      if (user != null && !_isSending) {
+                      if (user != null) {
                         _sendMessage(user.uid, user.name, user.role == 'admin');
                       }
                     },
@@ -219,9 +218,7 @@ class _IssueChatScreenState extends State<IssueChatScreen> {
                           )
                         ]
                       ),
-                      child: _isSending 
-                          ? const Center(child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)))
-                          : const Icon(Icons.send_rounded, color: Colors.white, size: 22),
+                      child: const Icon(Icons.send_rounded, color: Colors.white, size: 22),
                     ),
                   ),
                 ],

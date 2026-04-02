@@ -1,5 +1,31 @@
 {
   "dependencies": {
-    "firebase-admin": "^13.7.0"
-  }
+    "firebase-admin": "^13.7.0",
+    "pm2": "^6.0.14"
+  },
+  "name": "s63_hostel_issue_tracker_app",
+  "version": "1.0.0",
+  "description": "Hostel Issue Tracker\r Overview",
+  "main": "NOTIFICATION_TRIGGER.js",
+  "directories": {
+    "lib": "lib",
+    "test": "test"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "fix": "node FIX_ALL_DATA.js",
+    "start": "pm2 start NOTIFICATION_TRIGGER.js --name hostel-notifications"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kalviumcommunity/S63_Hostel_Issue_Tracker_App.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/kalviumcommunity/S63_Hostel_Issue_Tracker_App/issues"
+  },
+  "homepage": "https://github.com/kalviumcommunity/S63_Hostel_Issue_Tracker_App#readme"
 }
