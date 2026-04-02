@@ -291,6 +291,33 @@ class IssueProvider extends ChangeNotifier {
       }
 
       await _firestore.collection('issues').doc(issueId).update(updates);
+
+      final nowDateTime = DateTime.parse(now);
+      
+      // Helper for local update logic
+      IssueModel updateLocal(IssueModel old) {
+        return old.copyWith(
+          status: newStatus,
+          adminComment: adminComment,
+          updatedAt: nowDateTime,
+          assignedAt: newStatus == statusAssigned ? nowDateTime : old.assignedAt,
+          startedAt: newStatus == statusInProgress ? nowDateTime : old.startedAt,
+          resolvedAt: newStatus == statusResolved ? nowDateTime : old.resolvedAt,
+        );
+      }
+
+      // --- NEW: Update Local State for Instant UI Refresh ---
+      final issueIndex = _issues.indexWhere((i) => i.id == issueId);
+      if (issueIndex != -1) {
+        _issues[issueIndex] = updateLocal(_issues[issueIndex]);
+      }
+
+      final paginatedIndex = _paginatedIssues.indexWhere((i) => i.id == issueId);
+      if (paginatedIndex != -1) {
+        _paginatedIssues[paginatedIndex] = updateLocal(_paginatedIssues[paginatedIndex]);
+      }
+
+      notifyListeners();
       return true;
     } catch (e) {
       _error = e.toString();
