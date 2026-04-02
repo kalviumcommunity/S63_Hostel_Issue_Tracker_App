@@ -7,6 +7,7 @@ import '../../providers/issue_provider.dart';
 import '../../services/chat_service.dart';
 import '../../models/message_model.dart';
 import '../../models/issue_model.dart';
+import '../../models/user_model.dart';
 
 class IssueChatScreen extends StatefulWidget {
   final String issueId;
@@ -20,7 +21,14 @@ class _IssueChatScreenState extends State<IssueChatScreen> {
   final ChatService _chatService = ChatService();
   final TextEditingController _msgController = TextEditingController();
   final FocusNode _focusNode = FocusNode();
+  late Stream<List<MessageModel>> _messageStream;
   bool _isSending = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _messageStream = _chatService.getMessagesStream(widget.issueId);
+  }
 
   @override
   void dispose() {
@@ -33,11 +41,8 @@ class _IssueChatScreenState extends State<IssueChatScreen> {
     final text = _msgController.text.trim();
     if (text.isEmpty) return;
 
-    // Clear input instantly for better UX
     _msgController.clear();
     
-    // Firestore performs optimistic updates and auto-retries locally.
-    // We send silently to keep the 'Popup-Free' experience clean.
     _chatService.sendMessage(
       issueId: widget.issueId,
       text: text,
@@ -47,15 +52,12 @@ class _IssueChatScreenState extends State<IssueChatScreen> {
     );
   }
 
-
-
   @override
   Widget build(BuildContext context) {
-    final auth = context.watch<AuthProvider>();
-    final user = auth.userModel;
-    
-    // Fetch issue details for the Header
-    final issue = context.watch<IssueProvider>().getById(widget.issueId);
+    // Select only specific fields to avoid rebuilds when 'updatedAt' changes
+    final user = context.select<AuthProvider, UserModel?>((auth) => auth.userModel);
+    final issueTitle = context.select<IssueProvider, String?>((p) => p.getById(widget.issueId)?.title);
+    final issueStatus = context.select<IssueProvider, String?>((p) => p.getById(widget.issueId)?.status);
     
     return Scaffold(
       backgroundColor: const Color(0xFFF9FAFB),
@@ -73,16 +75,16 @@ class _IssueChatScreenState extends State<IssueChatScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              issue?.title ?? 'Chat', 
+              issueTitle ?? 'Chat', 
               style: const TextStyle(color: Color(0xFF111827), fontSize: 16, fontWeight: FontWeight.w800, letterSpacing: -0.5),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
-            if (issue != null) 
+            if (issueStatus != null) 
               Text(
-                'Status: ${issue.status.toUpperCase()}',
+                'Status: ${issueStatus.toUpperCase()}',
                 style: TextStyle(
-                  color: issue.status == statusResolved ? const Color(0xFF10B981) : const Color(0xFF6B7280), 
+                  color: issueStatus == statusResolved ? const Color(0xFF10B981) : const Color(0xFF6B7280), 
                   fontSize: 12, 
                   fontWeight: FontWeight.w700
                 ),
@@ -100,7 +102,7 @@ class _IssueChatScreenState extends State<IssueChatScreen> {
             // Chat List
             Expanded(
               child: StreamBuilder<List<MessageModel>>(
-                stream: _chatService.getMessagesStream(widget.issueId),
+                stream: _messageStream,
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return const Center(child: CircularProgressIndicator(color: Color(0xFF6C63FF)));
@@ -155,7 +157,7 @@ class _IssueChatScreenState extends State<IssueChatScreen> {
                 border: const Border(top: BorderSide(color: Color(0xFFE5E7EB), width: 1)),
                 boxShadow: [
                   BoxShadow(
-                    color: const Color(0xFF111827).withValues(alpha: 0.05),
+                    color: const Color(0xFF111827).withOpacity(0.05),
                     blurRadius: 10,
                     offset: const Offset(0, -4),
                   )
@@ -208,7 +210,7 @@ class _IssueChatScreenState extends State<IssueChatScreen> {
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
-                            color: const Color(0xFF6C63FF).withValues(alpha: 0.3),
+                            color: const Color(0xFF6C63FF).withOpacity(0.3),
                             blurRadius: 8,
                             offset: const Offset(0, 4),
                           )
@@ -251,9 +253,9 @@ class _MessageBubble extends StatelessWidget {
           if (!isMe) ...[
             CircleAvatar(
               radius: 16,
-              backgroundColor: message.isAdmin ? const Color(0xFFEF4444).withValues(alpha: 0.1) : const Color(0xFF3ECFCF).withValues(alpha: 0.1),
+              backgroundColor: message.isAdmin ? const Color(0xFFEF4444).withOpacity(0.1) : const Color(0xFF3ECFCF).withOpacity(0.1),
               child: Text(
-                message.senderName[0].toUpperCase(),
+                message.senderName.isNotEmpty ? message.senderName[0].toUpperCase() : '?',
                 style: TextStyle(
                   color: message.isAdmin ? const Color(0xFFEF4444) : const Color(0xFF3ECFCF),
                   fontWeight: FontWeight.w800,
@@ -278,13 +280,13 @@ class _MessageBubble extends StatelessWidget {
                 border: isMe ? null : Border.all(color: const Color(0xFFE5E7EB)),
                 boxShadow: isMe ? [
                   BoxShadow(
-                    color: const Color(0xFF6C63FF).withValues(alpha: 0.2),
+                    color: const Color(0xFF6C63FF).withOpacity(0.2),
                     blurRadius: 8,
                     offset: const Offset(0, 4),
                   )
                 ] : [
                   BoxShadow(
-                    color: const Color(0xFF111827).withValues(alpha: 0.03),
+                    color: const Color(0xFF111827).withOpacity(0.03),
                     blurRadius: 4,
                     offset: const Offset(0, 2),
                   )
@@ -318,7 +320,7 @@ class _MessageBubble extends StatelessWidget {
                   Text(
                     timeStr,
                     style: TextStyle(
-                      color: isMe ? Colors.white.withValues(alpha: 0.7) : const Color(0xFF9CA3AF),
+                      color: isMe ? Colors.white.withOpacity(0.7) : const Color(0xFF9CA3AF),
                       fontSize: 11,
                       fontWeight: FontWeight.w600,
                     ),

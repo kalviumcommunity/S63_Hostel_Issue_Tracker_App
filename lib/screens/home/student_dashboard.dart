@@ -112,7 +112,9 @@ class _HomeTab extends StatelessWidget {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        user?.name.split(' ')[0] ?? 'Student',
+                        (user?.name.isNotEmpty == true)
+                            ? user!.name.split(' ')[0]
+                            : 'Student',
                         style: const TextStyle(
                           color: Color(0xFF111827),
                           fontSize: 28,

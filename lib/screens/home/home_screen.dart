@@ -22,31 +22,35 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-
-    final auth = context.read<AuthProvider>();
-    final issueProvider = context.read<IssueProvider>();
-    final newUserId = auth.userModel?.uid;
-
-    // Only start a new listener if the user has actually changed
-    if (newUserId != null && newUserId != _currentUserId) {
-      _currentUserId = newUserId;
-
-      if (auth.userModel?.role == 'admin') {
-        issueProvider.listenToAllIssues(); // admin sees everyone's issues
-      } else if (auth.userModel?.role == 'staff') {
-        issueProvider.listenToMyAssignedIssues(newUserId); // staff sees issues assigned to them
-      } else {
-        issueProvider.listenToMyIssues(newUserId); // student sees only theirs
-      }
-    }
+    // We handle listener logic in build or via post-frame triggered by rebuilds
   }
 
   @override
   Widget build(BuildContext context) {
+    debugPrint('--- [HomeScreen] BUILD CALLED ---');
     final auth = context.watch<AuthProvider>();
-    
-    // 🔥 NEW: Show loading if user is authenticated but profile isn't loaded yet
-    if (auth.isLoggedIn && auth.userModel == null) {
+    final user = auth.userModel;
+
+    // Side-effect: Ensure listeners are active for the current user
+    if (user != null && user.uid != _currentUserId) {
+      _currentUserId = user.uid;
+      final role = user.role;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        final issueProvider = context.read<IssueProvider>();
+        debugPrint('--- [HomeScreen] CALLING LISTENERS for $role (${user.uid}) ---');
+        if (role == 'admin') {
+          issueProvider.listenToAllIssues();
+        } else if (role == 'staff') {
+          issueProvider.listenToMyAssignedIssues(user.uid);
+        } else {
+          issueProvider.listenToMyIssues(user.uid);
+        }
+      });
+    }
+
+    // Show loading if user is authenticated but profile isn't loaded yet
+    if (auth.isLoggedIn && user == null) {
       return const Scaffold(
         body: Center(
           child: Column(

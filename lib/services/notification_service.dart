@@ -81,7 +81,11 @@ class NotificationService {
               channel.id,
               channel.name,
               channelDescription: channel.description,
-              icon: android.smallIcon,
+              icon: android.smallIcon ?? '@mipmap/ic_launcher',
+              importance: Importance.high,
+              priority: Priority.high,
+              timeoutAfter: 3000, // Auto-dismiss after 3 seconds
+              ongoing: false,
             ),
           ),
         );

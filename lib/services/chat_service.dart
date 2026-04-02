@@ -11,7 +11,7 @@ class ChatService {
         .collection('issues')
         .doc(issueId)
         .collection('messages')
-        .orderBy('timestamp', descending: true) // new messages at the top/bottom depending on UI
+        .orderBy('timestamp', descending: true) // newest at top of list, which is bottom of reverse-ListView
         .snapshots()
         .map((snapshot) {
       return snapshot.docs

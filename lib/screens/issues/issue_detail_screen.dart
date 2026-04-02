@@ -86,7 +86,7 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
                     final s = staff[index];
                     return ListTile(
                       leading: CircleAvatar(
-                        backgroundColor: const Color(0xFF6C63FF).withValues(alpha: 0.1),
+                        backgroundColor: const Color(0xFF6C63FF).withOpacity(0.1),
                         child: Text(s.name[0]),
                       ),
                       title: Text(s.name),
@@ -238,10 +238,10 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
                       color: issue.priority == SLAService.priorityHigh 
-                        ? const Color(0xFFEF4444).withValues(alpha: 0.3)
+                        ? const Color(0xFFEF4444).withOpacity(0.3)
                         : issue.priority == SLAService.priorityMedium 
-                            ? const Color(0xFFF59E0B).withValues(alpha: 0.3)
-                            : const Color(0xFF10B981).withValues(alpha: 0.3),
+                            ? const Color(0xFFF59E0B).withOpacity(0.3)
+                            : const Color(0xFF10B981).withOpacity(0.3),
                     ),
                   ),
                   child: Row(
@@ -359,7 +359,7 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
                 border: Border.all(color: const Color(0xFFF3F4F6)),
                 boxShadow: [
                   BoxShadow(
-                    color: const Color(0xFF111827).withValues(alpha: 0.03),
+                    color: const Color(0xFF111827).withOpacity(0.03),
                     blurRadius: 10,
                     offset: const Offset(0, 4),
                   )
@@ -430,7 +430,7 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
               child: Row(
                 children: [
                   CircleAvatar(
-                    backgroundColor: const Color(0xFF3ECFCF).withValues(alpha: 0.1),
+                    backgroundColor: const Color(0xFF3ECFCF).withOpacity(0.1),
                     child: const Icon(Icons.person_pin_rounded, color: Color(0xFF3ECFCF)),
                   ),
                   const SizedBox(width: 12),
@@ -475,9 +475,9 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
               children: [
                 CircleAvatar(
                   radius: 24,
-                  backgroundColor: const Color(0xFF6C63FF).withValues(alpha: 0.1),
+                  backgroundColor: const Color(0xFF6C63FF).withOpacity(0.1),
                   child: Text(
-                    issue.createdByName[0].toUpperCase(),
+                    issue.createdByName.isNotEmpty ? issue.createdByName[0].toUpperCase() : '?',
                     style: const TextStyle(
                         color: Color(0xFF6C63FF),
                         fontWeight: FontWeight.w800,
@@ -514,7 +514,7 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
                 backgroundColor: const Color(0xFF111827), // Dark accent for contrast
                 foregroundColor: Colors.white,
                 elevation: 4,
-                shadowColor: const Color(0xFF111827).withValues(alpha: 0.3),
+                shadowColor: const Color(0xFF111827).withOpacity(0.3),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
               ),
             ),
@@ -527,9 +527,9 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
                 width: double.infinity,
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF6C63FF).withValues(alpha: 0.05),
+                  color: const Color(0xFF6C63FF).withOpacity(0.05),
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: const Color(0xFF6C63FF).withValues(alpha: 0.2)),
+                  border: Border.all(color: const Color(0xFF6C63FF).withOpacity(0.2)),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -627,7 +627,7 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
                 decoration: BoxDecoration(
                   color: const Color(0xFFD1FAE5),
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.3)),
+                  border: Border.all(color: const Color(0xFF10B981).withOpacity(0.3)),
                 ),
                 child: const Column(
                   children: [
@@ -662,7 +662,7 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
           backgroundColor: color,
           foregroundColor: Colors.white,
           elevation: 4,
-          shadowColor: color.withValues(alpha: 0.4),
+          shadowColor: color.withOpacity(0.4),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           minimumSize: const Size(140, 56),
         ),
