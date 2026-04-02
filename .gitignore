@@ -43,3 +43,25 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Node.js
+**/node_modules/
+package-lock.json
+npm-debug.log*
+
+# Mac/Windows artifacts
+.DS_Store
+Thumbs.db
+windows/
+macos/
+linux/
+*.exe
+*.dll
+
+# App specifics
+check_output.txt
+output.txt
+check_issues.js
+check_users.js
+service_account.json
+
