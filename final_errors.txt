@@ -1,0 +1,3 @@
+  error - The named parameter 'darwin' isn't defined - lib\services\notification_service.dart:41:7 - undefined_named_parameter
+  error - The named parameter 'settings' is required, but there's no corresponding argument - lib\services\notification_service.dart:44:31 - missing_required_argument
+  error - The named parameter 'initializationSettings' isn't defined - lib\services\notification_service.dart:45:7 - undefined_named_parameter

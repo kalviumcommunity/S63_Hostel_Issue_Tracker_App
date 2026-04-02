@@ -11,12 +11,16 @@ class ChatService {
         .collection('issues')
         .doc(issueId)
         .collection('messages')
-        .orderBy('timestamp', descending: true) // newest at top of list, which is bottom of reverse-ListView
-        .snapshots()
+        .snapshots(includeMetadataChanges: true) // Get instant local updates
         .map((snapshot) {
-      return snapshot.docs
+      final messages = snapshot.docs
           .map((doc) => MessageModel.fromMap(doc.data(), doc.id))
           .toList();
+      
+      // Memory Sort: Descending (Newest first) for reversed list (bottom-up)
+      messages.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+      
+      return messages;
     });
   }
 

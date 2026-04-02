@@ -74,6 +74,7 @@ class IssueProvider extends ChangeNotifier {
       _issues = snapshot.docs
           .map((doc) => IssueModel.fromMap(doc.data(), doc.id))
           .toList();
+      _issues.sort((a, b) => b.createdAt.compareTo(a.createdAt));
       notifyListeners();
     }, onError: (e) {
       debugPrint('--- [ADMIN] Error: $e ---');
@@ -263,19 +264,20 @@ class IssueProvider extends ChangeNotifier {
     String? adminComment,
   }) async {
     try {
-      final now = DateTime.now().toIso8601String();
       final updates = <String, dynamic>{
         'status': newStatus,
-        'updatedAt': now,
+        'updatedAt': FieldValue.serverTimestamp(),
       };
 
       if (newStatus == statusAssigned) {
-        updates['assignedAt'] = now;
+        updates['assignedAt'] = FieldValue.serverTimestamp();
       } else if (newStatus == statusInProgress) {
-        updates['startedAt'] = now;
+        updates['startedAt'] = FieldValue.serverTimestamp();
       } else if (newStatus == statusResolved) {
-        updates['resolvedAt'] = now;
+        updates['resolvedAt'] = FieldValue.serverTimestamp();
       }
+
+      final nowDateTime = DateTime.now();
 
       if (adminComment != null && adminComment.isNotEmpty) {
         updates['adminComment'] = adminComment;
@@ -292,8 +294,6 @@ class IssueProvider extends ChangeNotifier {
 
       await _firestore.collection('issues').doc(issueId).update(updates);
 
-      final nowDateTime = DateTime.parse(now);
-      
       // Helper for local update logic
       IssueModel updateLocal(IssueModel old) {
         return old.copyWith(
