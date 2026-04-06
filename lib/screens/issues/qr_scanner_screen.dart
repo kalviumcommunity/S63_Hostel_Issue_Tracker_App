@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
 class QRScannerScreen extends StatefulWidget {
@@ -66,17 +67,39 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
                 border: Border.all(color: const Color(0xFF6C63FF), width: 4),
                 borderRadius: BorderRadius.circular(24),
               ),
+              child: const Icon(Icons.qr_code_scanner_rounded, 
+                color: Color(0xFF6C63FF), size: 100),
             ),
           ),
-          const Positioned(
+          
+          Positioned(
             bottom: 80,
             left: 0,
             right: 0,
-            child: Center(
-              child: Text(
-                'Align the QR code inside the frame',
-                style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
-              ),
+            child: Column(
+              children: [
+                const Text(
+                  'Align the QR code inside the frame',
+                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                ),
+                if (kDebugMode) ...[
+                  const SizedBox(height: 24),
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      // MOCK SCAN RESULT: Mocking Block A, Room 101
+                      final mockData = {'block': 'A', 'room': '101'};
+                      Navigator.pop(context, mockData);
+                    },
+                    icon: const Icon(Icons.bug_report_rounded),
+                    label: const Text('DEBUG: Simulate Scan (Room 101)'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF6C63FF),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                    ),
+                  ),
+                ],
+              ],
             ),
           ),
         ],
