@@ -23,6 +23,7 @@ class _IssueChatScreenState extends State<IssueChatScreen> {
   final FocusNode _focusNode = FocusNode();
   late Stream<List<MessageModel>> _messageStream;
 
+
   @override
   void initState() {
     super.initState();
@@ -41,6 +42,7 @@ class _IssueChatScreenState extends State<IssueChatScreen> {
     if (text.isEmpty) return;
 
     _msgController.clear();
+    
     _focusNode.requestFocus();
 
     // Start sending but don't await (instant UI feedback)

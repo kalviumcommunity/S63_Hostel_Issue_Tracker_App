@@ -40,7 +40,6 @@ class NotificationService {
     print("[FCM] Permission: ${settings.authorizationStatus}");
 
     // 2. Initialize flutter_local_notifications
-    //    v21 API: InitializationSettings is POSITIONAL, not named.
     const androidSettings =
         AndroidInitializationSettings('@mipmap/ic_launcher');
     const iosSettings = DarwinInitializationSettings();
@@ -50,7 +49,7 @@ class NotificationService {
     );
 
     await _localNotifications.initialize(
-      settings: initSettings,
+      initSettings,
       onDidReceiveNotificationResponse: (details) {
         print("[FCM] Notification tapped. Payload: ${details.payload}");
         if (details.payload != null) {
@@ -79,12 +78,11 @@ class NotificationService {
         final path =
             (type == 'chat') ? '/issue/$issueId/chat' : '/issue/$issueId';
 
-        // v21 API: Based on analyzer feedback, all args must be named.
         _localNotifications.show(
-          id: notification.hashCode,
-          title: notification.title,
-          body: notification.body,
-          notificationDetails: NotificationDetails(
+          notification.hashCode,
+          notification.title,
+          notification.body,
+          NotificationDetails(
             android: AndroidNotificationDetails(
               _channel.id,
               _channel.name,

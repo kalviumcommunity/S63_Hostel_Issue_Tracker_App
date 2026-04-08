@@ -142,6 +142,7 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
     final user = context.watch<AuthProvider>().userModel;
     final isAdmin = user?.role == 'admin';
 
+
     if (issue == null) {
       return Scaffold(
         backgroundColor: const Color(0xFFF9FAFB),
