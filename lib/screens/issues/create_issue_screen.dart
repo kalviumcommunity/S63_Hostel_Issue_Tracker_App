@@ -237,7 +237,7 @@ class _CreateIssueScreenState extends State<CreateIssueScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      _isUsingQR ? 'LOCATION SCANNED' : 'QUICK REPORT',
+                      _isUsingQR ? 'LOCATION SCANNED' : 'COMMON AREA / ASSET',
                       style: TextStyle(
                         color: _isUsingQR ? const Color(0xFF10B981) : const Color(0xFF6C63FF),
                         fontSize: 11,
@@ -249,7 +249,7 @@ class _CreateIssueScreenState extends State<CreateIssueScreen> {
                     Text(
                       _isUsingQR 
                           ? 'Reporting for: $_scannedLocation'
-                          : 'Scan a Room QR to auto-fill location',
+                          : 'Scan area/machine QR to pinpoint location',
                       style: const TextStyle(
                         color: Color(0xFF111827),
                         fontSize: 14,

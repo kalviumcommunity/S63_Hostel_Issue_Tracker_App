@@ -111,7 +111,7 @@ class HostelIssueTrackerApp extends StatelessWidget {
     );
   }
 
-  CustomTransitionPage _fadeScaleTransition(Widget child, LocalKey key) {
+  static CustomTransitionPage _fadeScaleTransition(Widget child, LocalKey key) {
     return CustomTransitionPage(
       key: key,
       child: child,
@@ -129,40 +129,52 @@ class HostelIssueTrackerApp extends StatelessWidget {
     );
   }
 
-  GoRouter get _router => GoRouter(
-        initialLocation: '/',
-        routes: [
-          GoRoute(
-            path: '/', 
-            pageBuilder: (context, state) => _fadeScaleTransition(const SplashScreen(), state.pageKey),
-          ),
-          GoRoute(
-            path: '/login', 
-            pageBuilder: (context, state) => _fadeScaleTransition(const LoginScreen(), state.pageKey),
-          ),
-          GoRoute(
-            path: '/register', 
-            pageBuilder: (context, state) => _fadeScaleTransition(const RegisterScreen(), state.pageKey),
-          ),
-          GoRoute(
-            path: '/home', 
-            pageBuilder: (context, state) => _fadeScaleTransition(const HomeScreen(), state.pageKey),
-          ),
-          GoRoute(
-            path: '/create-issue',
-            pageBuilder: (context, state) => _fadeScaleTransition(const CreateIssueScreen(), state.pageKey),
-          ),
-          GoRoute(
-            path: '/issue/:id',
-            pageBuilder: (context, state) => _fadeScaleTransition(
+  static final _router = GoRouter(
+    initialLocation: '/',
+    routes: [
+      GoRoute(
+        path: '/',
+        pageBuilder: (context, state) =>
+            _fadeScaleTransition(const SplashScreen(), state.pageKey),
+      ),
+      GoRoute(
+        path: '/login',
+        pageBuilder: (context, state) =>
+            _fadeScaleTransition(const LoginScreen(), state.pageKey),
+      ),
+      GoRoute(
+        path: '/register',
+        pageBuilder: (context, state) =>
+            _fadeScaleTransition(const RegisterScreen(), state.pageKey),
+      ),
+      GoRoute(
+        path: '/home',
+        pageBuilder: (context, state) =>
+            _fadeScaleTransition(const HomeScreen(), state.pageKey),
+      ),
+      // Special home sub-route for easier navigation from outside
+      GoRoute(
+        path: '/create-issue',
+        pageBuilder: (context, state) =>
+            _fadeScaleTransition(const CreateIssueScreen(), state.pageKey),
+      ),
+      GoRoute(
+        path: '/issue/:id',
+        pageBuilder: (context, state) =>
+            _fadeScaleTransition(
                 IssueDetailScreen(issueId: state.pathParameters['id']!), state.pageKey),
-          ),
-          GoRoute(
-            path: '/issue/:id/chat',
-            pageBuilder: (context, state) => _fadeScaleTransition(
+      ),
+      GoRoute(
+        path: '/issue/:id/chat',
+        pageBuilder: (context, state) =>
+            _fadeScaleTransition(
                 IssueChatScreen(issueId: state.pathParameters['id']!), state.pageKey),
-          ),
-        ],
-      );
+      ),
+    ],
+  );
+
+  static void navigateTo(String path) {
+    _router.push(path);
+  }
 }
 

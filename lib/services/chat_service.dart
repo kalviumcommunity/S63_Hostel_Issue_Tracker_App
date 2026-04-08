@@ -11,12 +11,16 @@ class ChatService {
         .collection('issues')
         .doc(issueId)
         .collection('messages')
-        .orderBy('timestamp', descending: true) // newest at top of list, which is bottom of reverse-ListView
-        .snapshots()
+        .snapshots(includeMetadataChanges: true) // Get instant local updates
         .map((snapshot) {
-      return snapshot.docs
+      final messages = snapshot.docs
           .map((doc) => MessageModel.fromMap(doc.data(), doc.id))
           .toList();
+      
+      // Memory Sort: Descending (Newest first) for reversed list (bottom-up)
+      messages.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+      
+      return messages;
     });
   }
 
@@ -31,29 +35,31 @@ class ChatService {
     if (text.trim().isEmpty) return false;
 
     try {
-      final newMessage = MessageModel(
-        id: '',
-        text: text.trim(),
-        senderId: senderId,
-        senderName: senderName,
-        isAdmin: isAdmin,
-        timestamp: DateTime.now(),
-      );
-
-      // FIRE AND FORGET: Add the message but don't wait for server confirmation to continue
-      // Firestore will handle this optimistically in the local cache/stream
-      _firestore
+      final messageRef = _firestore
           .collection('issues')
           .doc(issueId)
           .collection('messages')
-          .add(newMessage.toMap());
+          .doc();
 
-      // BACKGROUND UPDATE: Refresh parent issue timestamp without blocking the UI
-      _firestore.collection('issues').doc(issueId).update({
-        'updatedAt': DateTime.now().toIso8601String(),
-      }).catchError((e) => debugPrint('Secondary update failed: $e'));
+      final timestamp = FieldValue.serverTimestamp();
 
-      return true; // We return true immediately as Firestore has cached the write locally
+      // Batch update: Add message and update issue activity time simultaneously
+      final batch = _firestore.batch();
+      
+      batch.set(messageRef, {
+        'text': text.trim(),
+        'senderId': senderId,
+        'senderName': senderName,
+        'isAdmin': isAdmin,
+        'timestamp': timestamp,
+      });
+
+      batch.update(_firestore.collection('issues').doc(issueId), {
+        'updatedAt': timestamp,
+      });
+
+      await batch.commit();
+      return true;
     } catch (e) {
       debugPrint('Chat error: $e');
       return false;

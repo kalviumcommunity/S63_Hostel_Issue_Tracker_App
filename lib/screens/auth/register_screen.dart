@@ -72,7 +72,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
       role: finalRole,
       staffCategory: finalRole == 'staff' ? _selectedCategory : null,
     );
-    if (success && mounted) {
+    if (!context.mounted) return;
+    if (success) {
       context.go('/home');
     }
   }
@@ -170,6 +171,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 DropdownMenuItem(value: 'Cleanliness', child: Text('Cleanliness')),
                                 DropdownMenuItem(value: 'Internet / WiFi', child: Text('Internet / WiFi')),
                                 DropdownMenuItem(value: 'Security', child: Text('Security')),
+                                DropdownMenuItem(value: 'Other', child: Text('Other')),
                               ],
                               onChanged: (val) => setState(() => _selectedCategory = val!),
                             ),

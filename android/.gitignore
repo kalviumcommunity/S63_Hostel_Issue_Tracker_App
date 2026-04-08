@@ -12,4 +12,7 @@ GeneratedPluginRegistrant.java
 key.properties
 **/*.keystore
 **/*.jks
+<<<<<<< HEAD
 assets/service_account
+=======
+>>>>>>> 4388dea6f0bc4bac7fa0cb6c3117afaab00d886f

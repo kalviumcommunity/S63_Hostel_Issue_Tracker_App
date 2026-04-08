@@ -1,117 +1,156 @@
-import 'dart:async';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../app/app.dart';
 
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  // Use specialized logging for background tasks if needed
-  print("Handling a background message: ${message.messageId}");
+  print("[FCM] Background message: ${message.messageId}");
 }
 
 class NotificationService {
   final FirebaseMessaging _fcm = FirebaseMessaging.instance;
-  final FlutterLocalNotificationsPlugin _localNotifications = FlutterLocalNotificationsPlugin();
-  
+  final FlutterLocalNotificationsPlugin _localNotifications =
+      FlutterLocalNotificationsPlugin();
+
   static final NotificationService _instance = NotificationService._internal();
   factory NotificationService() => _instance;
   NotificationService._internal();
 
-  /// Initialize Firebase Messaging and Local Notifications
+  /// The notification channel — defined once, reused everywhere.
+  static const AndroidNotificationChannel _channel = AndroidNotificationChannel(
+    'high_importance_channel',
+    'High Importance Notifications',
+    description: 'This channel is used for important notifications.',
+    importance: Importance.max,
+    playSound: true,
+    enableVibration: true,
+  );
+
   Future<void> initialize() async {
-    // 1. Request Permission (iOS/Android)
-    NotificationSettings settings = await _fcm.requestPermission(
+    print("[FCM] Initializing...");
+
+    // 1. Request permission (required for Android 13+)
+    final settings = await _fcm.requestPermission(
       alert: true,
       badge: true,
       sound: true,
     );
+    print("[FCM] Permission: ${settings.authorizationStatus}");
 
-    if (settings.authorizationStatus == AuthorizationStatus.authorized) {
-      print('User granted permission');
-    }
-
-    // 2. Initialize Local Notifications (Handling Foreground)
-    const AndroidInitializationSettings androidSettings =
+    // 2. Initialize flutter_local_notifications
+    const androidSettings =
         AndroidInitializationSettings('@mipmap/ic_launcher');
-    const DarwinInitializationSettings iosSettings = DarwinInitializationSettings();
-    
-    const InitializationSettings initSettings = InitializationSettings(
+    const iosSettings = DarwinInitializationSettings();
+    const initSettings = InitializationSettings(
       android: androidSettings,
       iOS: iosSettings,
     );
 
     await _localNotifications.initialize(
-      settings: initSettings,
+      initSettings,
       onDidReceiveNotificationResponse: (details) {
-        // Handle notification click
+        print("[FCM] Notification tapped. Payload: ${details.payload}");
+        if (details.payload != null) {
+          HostelIssueTrackerApp.navigateTo(details.payload!);
+        }
       },
     );
 
-    // 3. Define Android notification channel (High Importance)
-    const AndroidNotificationChannel channel = AndroidNotificationChannel(
-      'high_importance_channel',
-      'High Importance Notifications',
-      description: 'This channel is used for important notifications.',
-      importance: Importance.high,
-    );
-
+    // 3. Create the Android notification channel
     await _localNotifications
-        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
-        ?.createNotificationChannel(channel);
+        .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>()
+        ?.createNotificationChannel(_channel);
 
-    // 4. Handle Notification Clicks (on opened app)
-    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
-      print('A new onMessageOpenedApp event was published!');
-      // TODO: Navigate to the specific issue detail
-    });
-
-    // 5. Handle Foreground Messages
+    // 4. Foreground messages — MUST show manually via local notifications
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-      RemoteNotification? notification = message.notification;
-      AndroidNotification? android = message.notification?.android;
+      print("[FCM] FOREGROUND message received!");
+      print("[FCM] Title: ${message.notification?.title}");
+      print("[FCM] Body: ${message.notification?.body}");
+      print("[FCM] Data: ${message.data}");
 
-      if (notification != null && android != null) {
+      final notification = message.notification;
+      if (notification != null) {
+        final issueId = message.data['issueId'];
+        final type = message.data['type'];
+        final path =
+            (type == 'chat') ? '/issue/$issueId/chat' : '/issue/$issueId';
+
         _localNotifications.show(
-          id: notification.hashCode,
-          title: notification.title,
-          body: notification.body,
-          notificationDetails: NotificationDetails(
+          notification.hashCode,
+          notification.title,
+          notification.body,
+          NotificationDetails(
             android: AndroidNotificationDetails(
-              channel.id,
-              channel.name,
-              channelDescription: channel.description,
-              icon: android.smallIcon ?? '@mipmap/ic_launcher',
-              importance: Importance.high,
+              _channel.id,
+              _channel.name,
+              channelDescription: _channel.description,
+              icon: '@mipmap/ic_launcher',
+              importance: Importance.max,
               priority: Priority.high,
-              timeoutAfter: 3000, // Auto-dismiss after 3 seconds
-              ongoing: false,
+              playSound: true,
+              enableVibration: true,
             ),
           ),
+          payload: path,
         );
       }
     });
 
-    // 5. Setup Background Handler
+    // 5. Background tap — app was in background, user tapped notification
+    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+      print("[FCM] App opened from background notification");
+      _handleMessage(message);
+    });
+
+    // 6. Background handler
     FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+
+    // 7. Terminated tap — app was killed, user tapped notification
+    final initialMessage = await _fcm.getInitialMessage();
+    if (initialMessage != null) _handleMessage(initialMessage);
+
+    // 8. Token management
+    await updateFCMToken();
+    _fcm.onTokenRefresh.listen((_) => updateFCMToken());
   }
 
-  /// Get FCM Token and save to Firestore
-  Future<void> updateFCMToken() async {
-    String? token = await _fcm.getToken();
-    String? uid = FirebaseAuth.instance.currentUser?.uid;
-
-    if (token != null && uid != null) {
-      await FirebaseFirestore.instance.collection('users').doc(uid).update({
-        'fcmToken': token,
-        'lastTokenUpdate': FieldValue.serverTimestamp(),
-      });
+  void _handleMessage(RemoteMessage message) {
+    final issueId = message.data['issueId'];
+    final type = message.data['type'];
+    if (issueId != null) {
+      final path =
+          (type == 'chat') ? '/issue/$issueId/chat' : '/issue/$issueId';
+      HostelIssueTrackerApp.navigateTo(path);
     }
   }
 
-  /// Delete FCM Token (on Logout)
+  Future<void> updateFCMToken() async {
+    try {
+      final token = await _fcm.getToken();
+      final uid = FirebaseAuth.instance.currentUser?.uid;
+
+      print("\n=== [FCM DEBUG] ===");
+      print("TOKEN: $token");
+      print("UID: $uid");
+      print("===================\n");
+
+      if (token != null && uid != null) {
+        await FirebaseFirestore.instance.collection('users').doc(uid).set({
+          'fcmToken': token,
+          'lastTokenUpdate': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+        print("[FCM] Token saved to Firestore for $uid");
+      }
+    } catch (e) {
+      print("[FCM] Token sync FAILED: $e");
+    }
+  }
+
   Future<void> deleteToken() async {
-    String? uid = FirebaseAuth.instance.currentUser?.uid;
+    final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid != null) {
       await FirebaseFirestore.instance.collection('users').doc(uid).update({
         'fcmToken': FieldValue.delete(),

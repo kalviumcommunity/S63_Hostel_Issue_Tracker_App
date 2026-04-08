@@ -74,6 +74,7 @@ class IssueProvider extends ChangeNotifier {
       _issues = snapshot.docs
           .map((doc) => IssueModel.fromMap(doc.data(), doc.id))
           .toList();
+      _issues.sort((a, b) => b.createdAt.compareTo(a.createdAt));
       notifyListeners();
     }, onError: (e) {
       debugPrint('--- [ADMIN] Error: $e ---');
@@ -263,19 +264,20 @@ class IssueProvider extends ChangeNotifier {
     String? adminComment,
   }) async {
     try {
-      final now = DateTime.now().toIso8601String();
       final updates = <String, dynamic>{
         'status': newStatus,
-        'updatedAt': now,
+        'updatedAt': FieldValue.serverTimestamp(),
       };
 
       if (newStatus == statusAssigned) {
-        updates['assignedAt'] = now;
+        updates['assignedAt'] = FieldValue.serverTimestamp();
       } else if (newStatus == statusInProgress) {
-        updates['startedAt'] = now;
+        updates['startedAt'] = FieldValue.serverTimestamp();
       } else if (newStatus == statusResolved) {
-        updates['resolvedAt'] = now;
+        updates['resolvedAt'] = FieldValue.serverTimestamp();
       }
+
+      final nowDateTime = DateTime.now();
 
       if (adminComment != null && adminComment.isNotEmpty) {
         updates['adminComment'] = adminComment;
@@ -291,6 +293,31 @@ class IssueProvider extends ChangeNotifier {
       }
 
       await _firestore.collection('issues').doc(issueId).update(updates);
+
+      // Helper for local update logic
+      IssueModel updateLocal(IssueModel old) {
+        return old.copyWith(
+          status: newStatus,
+          adminComment: adminComment,
+          updatedAt: nowDateTime,
+          assignedAt: newStatus == statusAssigned ? nowDateTime : old.assignedAt,
+          startedAt: newStatus == statusInProgress ? nowDateTime : old.startedAt,
+          resolvedAt: newStatus == statusResolved ? nowDateTime : old.resolvedAt,
+        );
+      }
+
+      // --- NEW: Update Local State for Instant UI Refresh ---
+      final issueIndex = _issues.indexWhere((i) => i.id == issueId);
+      if (issueIndex != -1) {
+        _issues[issueIndex] = updateLocal(_issues[issueIndex]);
+      }
+
+      final paginatedIndex = _paginatedIssues.indexWhere((i) => i.id == issueId);
+      if (paginatedIndex != -1) {
+        _paginatedIssues[paginatedIndex] = updateLocal(_paginatedIssues[paginatedIndex]);
+      }
+
+      notifyListeners();
       return true;
     } catch (e) {
       _error = e.toString();
