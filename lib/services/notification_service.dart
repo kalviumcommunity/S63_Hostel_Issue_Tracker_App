@@ -49,7 +49,7 @@ class NotificationService {
     );
 
     await _localNotifications.initialize(
-      initSettings,
+      settings: initSettings,
       onDidReceiveNotificationResponse: (details) {
         print("[FCM] Notification tapped. Payload: ${details.payload}");
         if (details.payload != null) {
@@ -79,10 +79,10 @@ class NotificationService {
             (type == 'chat') ? '/issue/$issueId/chat' : '/issue/$issueId';
 
         _localNotifications.show(
-          notification.hashCode,
-          notification.title,
-          notification.body,
-          NotificationDetails(
+          id: notification.hashCode,
+          title: notification.title,
+          body: notification.body,
+          notificationDetails: NotificationDetails(
             android: AndroidNotificationDetails(
               _channel.id,
               _channel.name,

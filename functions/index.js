@@ -1,11 +1,10 @@
 const functions = require("firebase-functions");
 const admin = require("firebase-admin");
 
-// 🛡️ AUTHENTICATION: Using the service_account.json precisamente as requested
-const serviceAccount = require("./service_account.json");
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount)
-});
+// Initialize Firebase Admin for Cloud Environment
+// (In production, Firebase automatically provides service account credentials)
+admin.initializeApp();
+
 
 const db = admin.firestore();
 const fcm = admin.messaging();
